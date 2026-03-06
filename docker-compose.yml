@@ -1,0 +1,78 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: phil_onion_watch_postgres
+    environment:
+      POSTGRES_USER: onion
+      POSTGRES_PASSWORD: onion
+      POSTGRES_DB: phil_onion_watch
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U onion -d phil_onion_watch"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: phil_onion_watch_redis
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: phil_onion_watch_api
+    env_file:
+      - apps/api/.env
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./data:/workspace/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+    container_name: phil_onion_watch_web
+    env_file:
+      - apps/web/.env.local
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+      - /workspace/node_modules
+    depends_on:
+      - api
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: phil_onion_watch_worker
+    env_file:
+      - apps/api/.env
+    command: ["python", "-m", "app.jobs.worker"]
+    volumes:
+      - ./apps/api:/workspace/apps/api
+      - ./data:/workspace/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  pg_data:

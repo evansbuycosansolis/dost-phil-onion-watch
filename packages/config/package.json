@@ -1,0 +1,15 @@
+{
+  "name": "@phil-onion-watch/config",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo lint-skip-config",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo test-skip-config"
+  },
+  "dependencies": {
+    "zod": "^3.25.76"
+  }
+}

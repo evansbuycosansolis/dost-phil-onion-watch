@@ -1,0 +1,13 @@
+{
+  "default_password": "ChangeMe123!",
+  "accounts": [
+    {"role": "super_admin", "email": "super_admin@onionwatch.ph"},
+    {"role": "provincial_admin", "email": "provincial_admin@onionwatch.ph"},
+    {"role": "municipal_encoder", "email": "municipal_encoder@onionwatch.ph"},
+    {"role": "warehouse_operator", "email": "warehouse_operator@onionwatch.ph"},
+    {"role": "market_analyst", "email": "market_analyst@onionwatch.ph"},
+    {"role": "policy_reviewer", "email": "policy_reviewer@onionwatch.ph"},
+    {"role": "executive_viewer", "email": "executive_viewer@onionwatch.ph"},
+    {"role": "auditor", "email": "auditor@onionwatch.ph"}
+  ]
+}

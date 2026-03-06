@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(46, 142, 124, 0.15), transparent 35%),
+    radial-gradient(circle at 90% 0%, rgba(20, 62, 57, 0.12), transparent 30%),
+    #f7faf9;
+  color: #0f172a;
+}
+
+* {
+  box-sizing: border-box;
+}

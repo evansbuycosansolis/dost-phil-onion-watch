@@ -1,0 +1,1 @@
+Guidance on farmgate, wholesale, and retail reporting cadence and verification.
