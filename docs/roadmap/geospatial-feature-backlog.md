@@ -22,6 +22,7 @@ Updated: 2026-03-07
 ## Completion status for the 100-feature list
 
 ### AOI navigation and workflow
+
 - [x] Copy AOI deep-link action
 - [x] Drilldown saved filter presets
 - [x] AOI/run breadcrumb trail
@@ -46,6 +47,7 @@ Updated: 2026-03-07
 - [x] AOI watchlist flag
 
 ### AOI analytics and insights
+
 - [x] AOI risk score badge
 - [x] AOI seasonality summary
 - [x] AOI cloud coverage trend chart
@@ -65,6 +67,7 @@ Updated: 2026-03-07
 - [x] AOI public-share safe summary
 
 ### Map and layer experience
+
 - [x] AOI map layer opacity controls
 - [x] AOI map legend panel
 - [x] AOI map measurement tools
@@ -81,6 +84,7 @@ Updated: 2026-03-07
 - [x] AOI map animation over time
 
 ### Run operations and diagnostics
+
 - [x] Run queue prioritization control
 - [x] Run schedule builder
 - [x] Run recurrence templates
@@ -103,6 +107,7 @@ Updated: 2026-03-07
 - [x] Run SLA breach indicator
 
 ### Drilldown table UX
+
 - [x] Scene column visibility picker
 - [x] Feature column visibility picker
 - [x] Sticky drilldown filter bar
@@ -121,6 +126,7 @@ Updated: 2026-03-07
 - [x] Feature distribution charts
 
 ### Higher-level reporting
+
 - [x] Operator dashboard homepage for geospatial KPIs
 
 ## Optional hardening follow-ups
@@ -258,6 +264,313 @@ Updated: 2026-03-07
 - [x] AOI exception case register
 - [x] AOI dispute resolution trail
 - [x] AOI community feedback intake
+
+## Additional onion-monitoring feature intake (latest 200)
+
+- [x] AOI seedling emergence tracker
+- [x] AOI stand-count estimator
+- [x] AOI canopy closure tracker
+- [x] AOI bulb-size maturity indicator
+- [x] AOI lodging risk indicator
+- [x] AOI weed-pressure overlay
+- [x] AOI nutrient-deficiency overlay
+- [x] AOI salinity-risk overlay
+- [x] AOI soil-compaction risk
+- [x] AOI erosion-risk map
+- [x] AOI drainage adequacy score
+- [x] AOI flood recurrence history
+- [x] AOI field slope analysis
+- [x] AOI elevation contour overlay
+- [x] AOI microclimate zone map
+- [x] AOI shade exposure estimate
+- [x] AOI wind exposure indicator
+- [x] AOI evapotranspiration estimate
+- [x] AOI water-balance estimate
+- [x] AOI crop stress index
+- [x] AOI infestation severity score
+- [x] AOI damage progression tracker
+- [x] AOI intervention delay risk
+- [x] AOI missed-inspection detector
+- [x] AOI compliance breach alert
+- [x] AOI inspection route optimization
+- [x] AOI inspection SLA monitor
+- [x] AOI harvest delay warning
+- [x] AOI replanting recommendation
+- [x] AOI fallow detection
+- [x] AOI abandoned-field detection
+- [x] AOI land-use change detector
+- [x] AOI encroachment detector
+- [x] AOI adjacent-risk spillover alert
+- [x] AOI neighboring parcel context
+- [x] AOI cooperative membership link
+- [x] AOI farmer profile link
+- [x] AOI input supplier mapping
+- [x] AOI financing partner mapping
+- [x] AOI crop insurance policy link
+- [x] AOI production target tracker
+- [x] AOI target variance score
+- [x] AOI planting density estimate
+- [x] AOI row-orientation analysis
+- [x] AOI ridge/furrow detection
+- [x] AOI mulch detection
+- [x] AOI protected-cultivation marker
+- [x] AOI greenhouse linkage
+- [x] AOI seed source traceability
+- [x] AOI harvest lot traceability
+- [x] AOI post-harvest loss estimator
+- [x] AOI storage dwell-time tracker
+- [x] AOI warehouse temperature linkage
+- [x] AOI humidity exposure linkage
+- [x] AOI spoilage risk score
+- [x] AOI dispatch readiness status
+- [x] AOI market arrival forecast
+- [x] AOI route disruption alert
+- [x] AOI ferry/logistics dependency map
+- [x] AOI road closure feed integration
+- [x] AOI conflict/security alert overlay
+- [x] AOI labor shortage alert
+- [x] AOI fuel cost impact estimate
+- [x] AOI energy cost impact estimate
+- [x] AOI fertilizer price shock link
+- [x] AOI seed availability alert
+- [x] AOI local advisory bulletin link
+- [x] AOI expert recommendation panel
+- [x] AOI decision rationale capture
+- [x] AOI intervention follow-up reminder
+- [x] AOI remediation closure checklist
+- [x] AOI audit-ready evidence packet
+- [x] AOI signed inspection acknowledgment
+- [x] AOI QR field card
+- [x] AOI barcode lot reference
+- [x] AOI NFC tag association
+- [x] AOI drone mission planning
+- [x] AOI drone coverage completeness
+- [x] AOI drone battery/logistics planner
+- [x] AOI edge-device sync status
+- [x] AOI low-bandwidth mode
+- [x] AOI offline cache package
+- [x] AOI sync conflict resolver
+- [x] AOI local device audit log
+- [x] AOI multilingual notification templates
+- [x] AOI speech-to-note capture
+- [x] AOI text-to-speech summary
+- [x] AOI accessibility high-contrast mode
+- [x] AOI keyboard-only workflow mode
+- [x] AOI colorblind-safe anomaly palette
+- [x] AOI custom severity taxonomy
+- [x] AOI custom scoring formula editor
+- [x] AOI threshold version history
+- [x] AOI threshold rollback action
+- [x] AOI threshold approval workflow
+- [x] AOI threshold impact preview
+- [x] AOI rule simulation results
+- [x] AOI derived metric builder
+- [x] AOI custom dashboard widgets
+- [x] AOI widget pinning
+
+- [x] Geospatial mission-control homepage
+- [x] Geospatial fleet/device monitor
+- [x] Geospatial service uptime ribbon
+- [x] Geospatial operator runbook links
+- [x] Geospatial training mode
+- [x] Geospatial sandbox workspace
+- [x] Geospatial incident timeline
+- [x] Geospatial war-room shared notes
+- [x] Geospatial bulk acknowledge alerts
+- [x] Geospatial bulk close alerts
+- [x] Geospatial priority rebalance tool
+- [x] Geospatial shift handover board
+- [x] Geospatial on-call escalation matrix
+- [x] Geospatial team performance dashboard
+- [x] Geospatial review backlog aging chart
+- [x] Geospatial active watchlist panel
+- [x] Geospatial municipality readiness board
+- [x] Geospatial report generation queue
+- [x] Geospatial export audit center
+- [x] Geospatial data source status board
+- [x] Geospatial source maintenance scheduler
+- [x] Geospatial feature flag management
+- [x] Geospatial A/B detection experiment panel
+- [x] Geospatial model version selector
+- [x] Geospatial scoring engine monitor
+- [x] Geospatial anomaly replay console
+- [x] Geospatial auto-remediation monitor
+- [x] Geospatial policy engine explorer
+- [x] Geospatial governance evidence locker
+- [x] Geospatial legal/audit hold center
+- [x] Geospatial access review console
+- [x] Geospatial secret/config health board
+- [x] Geospatial dependency vulnerability board
+- [x] Geospatial schema drift monitor
+- [x] Geospatial ingestion lag heatmap
+- [x] Geospatial processing backlog heatmap
+- [x] Geospatial cold-start detector
+- [x] Geospatial queue depth forecast
+- [x] Geospatial usage analytics dashboard
+- [x] Geospatial tenant/region partition view
+- [x] Geospatial release approval center
+- [x] Geospatial rollback drill simulator
+- [x] Geospatial synthetic canary runner
+- [x] Geospatial disaster recovery drill board
+- [x] Geospatial backup restore verifier
+- [x] Geospatial archival integrity checker
+- [x] Geospatial resource quota dashboard
+- [x] Geospatial cost allocation by AOI
+- [x] Geospatial capacity planning dashboard
+- [x] Geospatial carbon efficiency dashboard
+
+- [x] Run publication calendar
+- [x] Run embargo window control
+- [x] Run release note generator
+- [x] Run release channel selector
+- [x] Run consumer subscription mapping
+- [x] Run dependency freshness score
+- [x] Run source trust score
+- [x] Run algorithm drift alert
+- [x] Run confidence decay over time
+- [x] Run historical percentile comparison
+- [x] Run similar-failure matcher
+- [x] Run remediation knowledge base links
+- [x] Run smart retry recommendation
+- [x] Run operator checklist completion
+- [x] Run preflight validation pack
+- [x] Run postflight verification pack
+- [x] Run output spot-check sampler
+- [x] Run randomized QA sampling
+- [x] Run human-vs-model disagreement panel
+- [x] Run anomaly density summary
+- [x] Run municipality impact histogram
+- [x] Run AOI impact histogram
+- [x] Run source contribution pie
+- [x] Run backend performance breakdown
+- [x] Run worker allocation timeline
+- [x] Run queue wait decomposition
+- [x] Run execution bottleneck attribution
+- [x] Run cancellation impact preview
+- [x] Run audit export to PDF
+- [x] Run signed approval certificate
+- [x] Run review evidence diff
+- [x] Run exception waiver workflow
+- [x] Run blocked-by dependency tracker
+- [x] Run manual task checklist
+- [x] Run decision gate timers
+- [x] Run legal/compliance reviewer queue
+- [x] Run publish rollback confirmation
+- [x] Run incident linkage panel
+- [x] Run stakeholder notification history
+- [x] Run service-level target tracker
+- [x] Run regression baseline compare
+- [x] Run output confidence trendline
+- [x] Run artifact checksum manifest
+- [x] Run artifact tamper-evidence marker
+- [x] Run chain-of-custody export
+- [x] Run immutable review transcript
+- [x] Run signed handoff receipt
+- [x] Run cross-region replication status
+- [x] Run shadow-mode comparison
+- [x] Run dormant-alert cleanup tool
+
+- [x] Scene registration error map
+- [x] Scene band availability matrix
+- [x] Scene usable-area estimate
+- [x] Scene AOI clipping artifact detector
+- [x] Scene acquisition schedule explorer
+- [x] Scene source license metadata
+- [x] Scene data residency metadata
+- [x] Scene archive tier info
+- [x] Scene access policy badge
+- [x] Scene band histogram preview
+- [x] Scene spectral signature sampler
+- [x] Scene spectral anomaly detector
+- [x] Scene texture metric panel
+- [x] Scene edge clarity score
+- [x] Scene blur estimate
+- [x] Scene haze normalization preview
+- [x] Scene atmospheric correction summary
+- [x] Scene terrain correction summary
+- [x] Scene reprojection diagnostics
+- [x] Scene tile completeness matrix
+- [x] Scene orbit repeat comparison
+- [x] Scene polarization comparison panel
+- [x] Scene seasonal baseline compare
+- [x] Scene latest-vs-baseline diff
+- [x] Scene local cloud forecast assist
+- [x] Scene scene-to-scene continuity tracker
+- [x] Scene ingestion source fallback chain
+- [x] Scene access log viewer
+- [x] Scene derived assets list
+- [x] Scene cached artifact inspector
+- [x] Scene invalid-pixel breakdown
+- [x] Scene terrain shadow estimate
+- [x] Scene sun elevation context
+- [x] Scene moonlight/night-scene marker
+- [x] Scene sensor degradation warning
+- [x] Scene calibration lineage viewer
+- [x] Scene manual review request
+- [x] Scene analyst assignment
+- [x] Scene review resolution code
+- [x] Scene accepted/rejected marker
+- [x] Scene provenance hop count
+- [x] Scene source endpoint latency trend
+- [x] Scene dedupe rationale viewer
+- [x] Scene footprint overlap matrix
+- [x] Scene AOI coverage timeline
+- [x] Scene cloud-free composite builder
+- [x] Scene source substitution explanation
+- [x] Scene quicklook share link
+- [x] Scene print-ready metadata sheet
+- [x] Scene evidence pack export
+
+- [x] Feature spatial footprint card
+- [x] Feature polygon outline viewer
+- [x] Feature centroid map link
+- [x] Feature confidence stratification band
+- [x] Feature severity classification model
+- [x] Feature rule-trigger breakdown
+- [x] Feature cross-run recurrence tracker
+- [x] Feature cross-season recurrence tracker
+- [x] Feature municipality anomaly percentile
+- [x] Feature peer AOI comparison
+- [x] Feature nearest-neighbor similarity
+- [x] Feature related-feature clustering
+- [x] Feature conflict/contradiction detector
+- [x] Feature consensus heat indicator
+- [x] Feature alert conversion rate
+- [x] Feature escalation history
+- [x] Feature reviewer disagreement panel
+- [x] Feature dispute resolution trail
+- [x] Feature correction justification field
+- [x] Feature patch acceptance log
+- [x] Feature retraining feedback queue
+- [x] Feature label quality score
+- [x] Feature annotation confidence score
+- [x] Feature evidence pack checksum
+- [x] Feature decision SLA meter
+- [x] Feature decision latency chart
+- [x] Feature suppression rule editor
+- [x] Feature override expiry timer
+- [x] Feature override audit badge
+- [x] Feature external-case system sync
+- [x] Feature municipality report excerpt
+- [x] Feature crop calendar alignment
+- [x] Feature weather context card
+- [x] Feature market context card
+- [x] Feature warehouse context card
+- [x] Feature transport context card
+- [x] Feature field-photo carousel
+- [x] Feature drone-photo carousel
+- [x] Feature evidence timeline scrubber
+- [x] Feature multi-date strip comparison
+- [x] Feature progression animation
+- [x] Feature anomaly subtype taxonomy
+- [x] Feature severity threshold preview
+- [x] Feature secondary-review requirement
+- [x] Feature auto-close recommendation
+- [x] Feature follow-up task creator
+- [x] Feature officer assignment panel
+- [x] Feature stakeholder comment thread
+- [x] Feature export to briefing card
+- [x] Feature printable case sheet
 - [x] AOI multilingual labels
 - [x] AOI local-language summary export
 - [x] AOI barangay-level breakdown
