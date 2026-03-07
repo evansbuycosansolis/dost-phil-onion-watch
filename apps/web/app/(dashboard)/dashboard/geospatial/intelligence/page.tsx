@@ -95,6 +95,11 @@ export default function GeospatialIntelligencePage() {
     queryFn: () => apiFetch<Record<string, unknown>>("/api/v1/geospatial/dashboard/self-test", { token }),
     enabled: !!token,
   });
+  const operationsCenter = useQuery({
+    queryKey: ["geo-intelligence-operations-center", token],
+    queryFn: () => apiFetch<Record<string, unknown>>("/api/v1/geospatial/dashboard/operations-center", { token }),
+    enabled: !!token,
+  });
 
   const reviewMutation = useMutation({
     mutationFn: () =>
@@ -310,6 +315,11 @@ export default function GeospatialIntelligencePage() {
               <StatCard label="Stuck Detector" value={String((runOps.data.run_stuck_state_detector as { is_stuck?: boolean } | undefined)?.is_stuck ?? false)} hint="Run state" />
               <StatCard label="Cost Estimate" value={String((runOps.data.run_infrastructure_cost_estimate as { estimated_cost_usd?: number } | undefined)?.estimated_cost_usd ?? 0)} hint="USD proxy" />
             </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <StatCard label="Approval Gate" value={String((runOps.data.run_approval_gate_before_release as { status?: string } | undefined)?.status ?? "not_requested")} hint="Before release" />
+              <StatCard label="Release Blocked" value={String((runOps.data.run_approval_gate_before_release as { release_blocked?: boolean } | undefined)?.release_blocked ?? true)} hint="Fail-closed" />
+              <StatCard label="Custody Events" value={String((runOps.data.run_chain_of_custody_timeline as { event_count?: number } | undefined)?.event_count ?? 0)} hint="Timeline depth" />
+            </div>
             <div className="flex flex-wrap gap-2 text-sm">
               <button
                 type="button"
@@ -352,6 +362,9 @@ export default function GeospatialIntelligencePage() {
                       { key: "scene_overlap_with_aoi_percentage", label: "Overlap %" },
                       { key: "scene_quality_composite_score", label: "Quality" },
                       { key: "scene_usable_pixel_percentage", label: "Usable %" },
+                      { key: "scene_georegistration_quality_score", label: "Georeg Quality" },
+                      { key: "scene_aoi_boundary_mismatch_detector", label: "Boundary Mismatch", render: (row) => String(((row as { scene_aoi_boundary_mismatch_detector?: { mismatch?: boolean } }).scene_aoi_boundary_mismatch_detector?.mismatch) ?? false) },
+                      { key: "scene_radiometric_anomaly_detector", label: "Radiometric Flag", render: (row) => String(((row as { scene_radiometric_anomaly_detector?: { flagged?: boolean } }).scene_radiometric_anomaly_detector?.flagged) ?? false) },
                     ]}
                     rows={sceneRows}
                   />
@@ -364,6 +377,9 @@ export default function GeospatialIntelligencePage() {
                       { key: "feature_id", label: "Feature ID" },
                       { key: "source", label: "Source" },
                       { key: "feature_temporal_cluster_key", label: "Temporal Cluster" },
+                      { key: "feature_cross_source_consensus_score", label: "Cross-source Consensus" },
+                      { key: "feature_human_review_priority_score", label: "Review Priority" },
+                      { key: "feature_review_sla_timer", label: "SLA Timer", render: (row) => String(((row as { feature_review_sla_timer?: { elapsed_hours?: number } }).feature_review_sla_timer?.elapsed_hours) ?? "n/a") },
                       { key: "anomaly_score", label: "Anomaly" },
                       { key: "feature_review_status", label: "Review" },
                     ]}
@@ -398,7 +414,61 @@ export default function GeospatialIntelligencePage() {
           </div>
         ) : null}
       </SectionShell>
+
+      <SectionShell title="Geospatial Operations Center">
+        {operationsCenter.isLoading ? <LoadingState label="Loading operations center..." /> : null}
+        {operationsCenter.error ? <ErrorState message="Failed to load geospatial operations center" /> : null}
+        {operationsCenter.data ? (
+          <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-4">
+              <StatCard
+                label="Notification Center"
+                value={String(((operationsCenter.data.geospatial_notification_center as { total_open?: number } | undefined)?.total_open) ?? 0)}
+                hint="Open notifications"
+              />
+              <StatCard
+                label="Unresolved Queue"
+                value={String((((operationsCenter.data.geospatial_unresolved_anomaly_queue as unknown[]) ?? []).length))}
+                hint="Anomaly queue size"
+              />
+              <StatCard
+                label="Readiness Score"
+                value={String((((operationsCenter.data.geospatial_readiness_checklist as { score?: number } | undefined)?.score) ?? 0))}
+                hint="Operational readiness"
+              />
+              <StatCard
+                label="Config Drift"
+                value={String((((operationsCenter.data.geospatial_configuration_drift_alert as { active?: boolean } | undefined)?.active) ?? false))}
+                hint="Deployment guardrail"
+              />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card title="Inbox Triage Queue">
+                <DataTable
+                  columns={[
+                    { key: "alert_id", label: "Alert" },
+                    { key: "severity", label: "Severity" },
+                    { key: "scope_type", label: "Scope" },
+                    { key: "title", label: "Title" },
+                  ]}
+                  rows={(((operationsCenter.data.geospatial_inbox_triage_queue as Record<string, unknown>[] | undefined) ?? []).slice(0, 10))}
+                />
+              </Card>
+              <Card title="Analyst Workload Board">
+                <DataTable
+                  columns={[
+                    { key: "analyst_group", label: "Group" },
+                    { key: "assigned_items", label: "Assigned" },
+                    { key: "capacity", label: "Capacity" },
+                    { key: "utilization", label: "Utilization" },
+                  ]}
+                  rows={(((operationsCenter.data.geospatial_analyst_workload_board as Record<string, unknown>[] | undefined) ?? []).slice(0, 10))}
+                />
+              </Card>
+            </div>
+          </div>
+        ) : null}
+      </SectionShell>
     </div>
   );
 }
-

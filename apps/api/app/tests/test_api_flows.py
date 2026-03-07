@@ -649,12 +649,19 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "aoi_heatmap_by_anomaly_density" in surveillance_payload
     assert "aoi_weather_overlay_integration" in surveillance_payload
     assert "aoi_confidence_adjusted_anomaly_score" in surveillance_payload
+    assert "aoi_adaptive_threshold_tuning" in surveillance_payload
+    assert "aoi_intervention_recommendation_engine" in surveillance_payload
+    assert "aoi_market_price_correlation_panel" in surveillance_payload
+    assert "aoi_crop_calendar_overlay" in surveillance_payload
 
     aoi_ops = client.get(f"/api/v1/geospatial/aois/{aoi_id}/operations/overview", headers=auth_headers)
     assert aoi_ops.status_code == 200
     assert "aoi_false_positive_review_workflow" in aoi_ops.json()
     assert "aoi_mobile_ready_field_checklist" in aoi_ops.json()
     assert "aoi_escalation_policy" in aoi_ops.json()
+    assert "aoi_parcel_subdivision_support" in aoi_ops.json()
+    assert "aoi_confidence_waiver_workflow" in aoi_ops.json()
+    assert "aoi_local_language_summary_export" in aoi_ops.json()
 
     review_update = client.post(
         f"/api/v1/geospatial/aois/{aoi_id}/operations/review",
@@ -682,6 +689,46 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
         },
     )
     assert notification_update.status_code == 200
+
+    config_update = client.post(
+        f"/api/v1/geospatial/aois/{aoi_id}/operations/configure",
+        headers=auth_headers,
+        json={
+            "parcel_structure": {
+                "subdivisions": [{"id": "S1", "name": "North Parcel"}],
+                "merged_parcels": [{"id": "M1", "children": ["S1", "S2"]}],
+                "ownership_ledger": [{"owner": "LGU", "effective_date": "2026-01-01"}],
+            },
+            "governance": {
+                "confidence_waiver": {"active": True, "reason": "Cloud contamination"},
+                "exception_cases": [{"id": "EX-1", "status": "open"}],
+                "dispute_resolution": [{"id": "DP-1", "status": "pending"}],
+                "community_feedback": [{"id": "FB-1", "message": "Needs field validation"}],
+                "retention_policy": {"retention_days": 400, "legal_hold": False},
+                "privacy_controls": {"redaction_mode": "strict", "export_watermarking": True},
+                "source_policy": {"preferred_sources": ["sentinel-2"], "excluded_sources": ["landsat-8"]},
+                "compliance_evidence": {"bundle_id": "EV-1", "last_verified_at": "2026-03-01T00:00:00"},
+            },
+            "multilingual": {"labels": {"en": "AOI Test", "tl": "Pook Test"}, "default_language": "tl", "supported_languages": ["en", "tl"]},
+            "interventions": {
+                "recommended_action_checklist": [{"item": "Validate boundaries", "done": False}],
+                "readiness_score": 0.83,
+                "history": [{"action": "monitoring", "result": "improving"}],
+                "fertilizer_schedule": [{"date": "2026-03-15", "type": "NPK"}],
+                "irrigation_events": [{"date": "2026-03-10", "volume": 10}],
+                "manual_sampling_records": [{"date": "2026-03-08", "observer": "analyst"}],
+                "crop_rotation_history": [{"season": "2025-Q4", "crop": "onion"}],
+            },
+        },
+    )
+    assert config_update.status_code == 200
+
+    localized_summary = client.get(
+        f"/api/v1/geospatial/aois/{aoi_id}/summary/localized?lang=tl",
+        headers=auth_headers,
+    )
+    assert localized_summary.status_code == 200
+    assert localized_summary.headers["content-type"].startswith("application/json")
 
     offline_packet = client.get(f"/api/v1/geospatial/aois/{aoi_id}/operations/offline-packet", headers=auth_headers)
     assert offline_packet.status_code == 200
@@ -712,6 +759,67 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "run_signed_export_package" in run_ops_payload
     assert "run_automated_remediation_suggestion" in run_ops_payload
     assert "run_queue_saturation_alert" in run_ops_payload
+    assert "run_approval_gate_before_release" in run_ops_payload
+    assert "run_chain_of_custody_timeline" in run_ops_payload
+    assert "run_publish_unpublish_workflow" in run_ops_payload
+    assert "run_artifact_retention_policy" in run_ops_payload
+    assert "run_decision_log" in run_ops_payload
+    assert "run_scenario_replay" in run_ops_payload
+
+    approval_gate_status = client.get(f"/api/v1/geospatial/runs/{run_id}/operations/approval-gate", headers=auth_headers)
+    assert approval_gate_status.status_code == 200
+    assert "status" in approval_gate_status.json()
+
+    approval_gate_request = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/approval-gate",
+        headers=auth_headers,
+        json={"status": "requested", "notes": "request release review"},
+    )
+    assert approval_gate_request.status_code == 200
+    assert approval_gate_request.json()["approval_gate"]["status"] in {"requested", "pending_review"}
+
+    approval_gate_approve = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/approval-gate",
+        headers=auth_headers,
+        json={"status": "approved", "notes": "release approved"},
+    )
+    assert approval_gate_approve.status_code == 200
+    assert approval_gate_approve.json()["approval_gate"]["status"] == "approved"
+
+    chain_of_custody = client.get(f"/api/v1/geospatial/runs/{run_id}/operations/chain-of-custody", headers=auth_headers)
+    assert chain_of_custody.status_code == 200
+    chain_payload = chain_of_custody.json()
+    assert chain_payload["run_id"] == run_id
+    assert isinstance(chain_payload.get("events"), list)
+    assert chain_payload["event_count"] >= 1
+
+    publish_update = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/publish",
+        headers=auth_headers,
+        json={"action": "publish", "channel": "executive"},
+    )
+    assert publish_update.status_code == 200
+
+    archive_update = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/archive",
+        headers=auth_headers,
+        json={"action": "archive", "tier": "cold", "retention_days": 365},
+    )
+    assert archive_update.status_code == 200
+
+    governance_update = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/governance",
+        headers=auth_headers,
+        json={"action": "decision", "decision": "approve_release", "notes": "test"},
+    )
+    assert governance_update.status_code == 200
+
+    scenario_update = client.post(
+        f"/api/v1/geospatial/runs/{run_id}/operations/scenario",
+        headers=auth_headers,
+        json={"action": "synthetic_test", "enabled": True, "dataset": "synthetic-default"},
+    )
+    assert scenario_update.status_code == 200
 
     handoff_update = client.post(
         f"/api/v1/geospatial/runs/{run_id}/operations/handoff",
@@ -746,12 +854,30 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert scene_intel.status_code == 200
     scene_payload = scene_intel.json()
     assert "rows" in scene_payload
+    if scene_payload["rows"]:
+        first_scene = scene_payload["rows"][0]
+        assert "scene_provenance_chain_viewer" in first_scene
+        assert "scene_polygon_clipping_preview" in first_scene
+        assert "scene_georegistration_quality_score" in first_scene
+        assert "scene_tile_cache_inspector" in first_scene
+        scene_chain = client.get(
+            f"/api/v1/geospatial/runs/{run_id}/scenes/provenance-chain?source={first_scene['source']}&scene_id={first_scene['scene_id']}",
+            headers=auth_headers,
+        )
+        assert scene_chain.status_code == 200
+        assert "timeline" in scene_chain.json()
 
     feature_intel = client.get(f"/api/v1/geospatial/runs/{run_id}/feature-intelligence", headers=auth_headers)
     assert feature_intel.status_code == 200
     feature_payload = feature_intel.json()
     assert "rows" in feature_payload
     assert "feature_spatial_clustering_panel" in feature_payload
+    assert "feature_cross_source_consensus_score_panel" in feature_payload
+    assert "feature_threshold_what_if_simulator" in feature_payload
+    assert "feature_review_sla_timer_panel" in feature_payload
+    if feature_payload["rows"]:
+        assert "feature_cross_source_consensus_score" in feature_payload["rows"][0]
+        assert "feature_human_review_priority_score" in feature_payload["rows"][0]
 
     if feature_payload["rows"]:
         feature_id = feature_payload["rows"][0]["feature_id"]
@@ -783,6 +909,22 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     monthly_perf = client.post("/api/v1/geospatial/dashboard/monthly-performance/generate", headers=auth_headers)
     assert monthly_perf.status_code == 200
     assert monthly_perf.json()["id"]
+
+    executive_brief = client.post("/api/v1/geospatial/dashboard/executive/anomaly-brief/generate", headers=auth_headers)
+    assert executive_brief.status_code == 200
+    brief_payload = executive_brief.json()
+    assert brief_payload["id"] is not None
+    assert brief_payload["summary"]
+    assert isinstance(brief_payload["top_risk_aois"], list)
+
+    latest_brief = client.get("/api/v1/geospatial/dashboard/executive/anomaly-brief/latest", headers=auth_headers)
+    assert latest_brief.status_code == 200
+    assert latest_brief.json()["id"] == brief_payload["id"]
+
+    ops_center = client.get("/api/v1/geospatial/dashboard/operations-center", headers=auth_headers)
+    assert ops_center.status_code == 200
+    assert "geospatial_notification_center" in ops_center.json()
+    assert "geospatial_configuration_drift_alert" in ops_center.json()
 
     config_health = client.get("/api/v1/geospatial/dashboard/config-health", headers=auth_headers)
     assert config_health.status_code == 200

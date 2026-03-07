@@ -2,7 +2,8 @@
 
 import { apiFetch } from "@phil-onion-watch/api-client";
 import { DataTable, EmptyState, ErrorState, LoadingState, PageHeader, SectionShell, StatCard } from "@phil-onion-watch/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { useAuth } from "../../../../providers";
 
@@ -41,6 +42,46 @@ type ExecutiveDashboard = {
     avg_confidence_score: number;
     reliability_score: number;
   }>;
+  executive_municipality_summary_board: Array<{
+    municipality_id: number;
+    aoi_count: number;
+    avg_anomaly_score: number;
+    sample_count: number;
+  }>;
+  executive_top_risk_aoi_digest: Array<{
+    aoi_id: number;
+    aoi_code: string | null;
+    risk_level: string;
+    anomaly_score: number;
+    sample_count: number;
+  }>;
+  executive_supply_impact_estimator: {
+    score: number;
+    high_risk_aoi_count: number;
+    warehouse_stock_tons_30d: number;
+    import_volume_tons_30d: number;
+  };
+  executive_intervention_planning_board: Array<{
+    priority: number;
+    municipality_id: number;
+    recommended_intervention: string;
+    risk_score: number;
+  }>;
+};
+
+type ExecutiveAnomalyBrief = {
+  id: number | null;
+  title: string | null;
+  generated_at: string | null;
+  summary: string | null;
+  highlights: string[];
+  top_risk_aois: Array<{
+    aoi_id: number;
+    aoi_code: string | null;
+    aoi_name: string | null;
+    anomaly_score: number;
+    sample_count: number;
+  }>;
 };
 
 function percent(value: number) {
@@ -49,11 +90,25 @@ function percent(value: number) {
 
 export default function GeospatialExecutiveDashboardPage() {
   const { token } = useAuth();
+  const [message, setMessage] = useState("");
 
   const executive = useQuery({
     queryKey: ["geospatial-executive-dashboard", token],
     queryFn: () => apiFetch<ExecutiveDashboard>("/api/v1/geospatial/dashboard/executive", { token }),
     enabled: !!token,
+  });
+  const latestBrief = useQuery({
+    queryKey: ["geospatial-executive-anomaly-brief-latest", token],
+    queryFn: () => apiFetch<ExecutiveAnomalyBrief>("/api/v1/geospatial/dashboard/executive/anomaly-brief/latest", { token }),
+    enabled: !!token,
+  });
+  const generateBrief = useMutation({
+    mutationFn: () => apiFetch<ExecutiveAnomalyBrief>("/api/v1/geospatial/dashboard/executive/anomaly-brief/generate", { token, method: "POST" }),
+    onSuccess: async () => {
+      setMessage("Executive anomaly brief generated");
+      await latestBrief.refetch();
+    },
+    onError: () => setMessage("Executive anomaly brief generation failed"),
   });
 
   return (
@@ -73,6 +128,7 @@ export default function GeospatialExecutiveDashboardPage() {
         }
       />
 
+      {message ? <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{message}</div> : null}
       {executive.isLoading ? <LoadingState label="Loading executive geospatial KPIs..." /> : null}
       {executive.error ? <ErrorState message="Failed to load geospatial executive dashboard" /> : null}
 
@@ -138,9 +194,85 @@ export default function GeospatialExecutiveDashboardPage() {
               )}
             </SectionShell>
           </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <SectionShell title="Executive Municipality Summary Board">
+              <DataTable
+                columns={[
+                  { key: "municipality_id", label: "Municipality" },
+                  { key: "aoi_count", label: "AOIs" },
+                  { key: "avg_anomaly_score", label: "Avg Anomaly" },
+                  { key: "sample_count", label: "Samples" },
+                ]}
+                rows={executive.data.executive_municipality_summary_board as unknown as Record<string, unknown>[]}
+              />
+            </SectionShell>
+            <SectionShell title="Executive Top-risk AOI Digest">
+              <DataTable
+                columns={[
+                  { key: "aoi_code", label: "AOI" },
+                  { key: "risk_level", label: "Risk" },
+                  { key: "anomaly_score", label: "Anomaly" },
+                  { key: "sample_count", label: "Samples" },
+                ]}
+                rows={executive.data.executive_top_risk_aoi_digest as unknown as Record<string, unknown>[]}
+              />
+            </SectionShell>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <SectionShell title="Executive Supply Impact Estimator">
+              <div className="grid gap-3 md:grid-cols-2">
+                <StatCard label="Impact Score" value={executive.data.executive_supply_impact_estimator.score} hint="0-1 risk-weighted" />
+                <StatCard label="High-risk AOIs" value={executive.data.executive_supply_impact_estimator.high_risk_aoi_count} hint="Current window" />
+                <StatCard label="Warehouse Stock (30d)" value={executive.data.executive_supply_impact_estimator.warehouse_stock_tons_30d} hint="tons" />
+                <StatCard label="Import Volume (30d)" value={executive.data.executive_supply_impact_estimator.import_volume_tons_30d} hint="tons" />
+              </div>
+            </SectionShell>
+            <SectionShell title="Executive Intervention Planning Board">
+              <DataTable
+                columns={[
+                  { key: "priority", label: "Priority" },
+                  { key: "municipality_id", label: "Municipality" },
+                  { key: "recommended_intervention", label: "Intervention" },
+                  { key: "risk_score", label: "Risk Score" },
+                ]}
+                rows={executive.data.executive_intervention_planning_board as unknown as Record<string, unknown>[]}
+              />
+            </SectionShell>
+          </div>
+
+          <SectionShell title="Executive Anomaly Brief Generator">
+            {latestBrief.isLoading ? <LoadingState label="Loading latest anomaly brief..." /> : null}
+            {latestBrief.error ? <ErrorState message="Failed to load executive anomaly brief" /> : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" onClick={() => generateBrief.mutate()} className="rounded border border-slate-300 px-3 py-1 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                Generate anomaly brief
+              </button>
+            </div>
+            {latestBrief.data && latestBrief.data.id ? (
+              <div className="mt-3 space-y-3 text-sm text-slate-700">
+                <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="font-medium text-slate-900">{latestBrief.data.title}</div>
+                  <div className="text-xs text-slate-500">Generated at {latestBrief.data.generated_at ?? "n/a"}</div>
+                  <p className="mt-2">{latestBrief.data.summary}</p>
+                </div>
+                <DataTable
+                  columns={[
+                    { key: "aoi_code", label: "AOI" },
+                    { key: "aoi_name", label: "Name" },
+                    { key: "anomaly_score", label: "Anomaly Score" },
+                    { key: "sample_count", label: "Samples" },
+                  ]}
+                  rows={latestBrief.data.top_risk_aois as unknown as Record<string, unknown>[]}
+                />
+              </div>
+            ) : (
+              <EmptyState title="No anomaly brief yet" description="Generate the first executive anomaly brief for this environment." />
+            )}
+          </SectionShell>
         </>
       ) : null}
     </div>
   );
 }
-

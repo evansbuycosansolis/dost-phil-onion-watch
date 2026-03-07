@@ -302,3 +302,7 @@ class GeospatialExecutiveDashboardResponse(BaseModel):
     monthly_run_trend: list[dict[str, Any]]
     top_anomaly_aois: list[dict[str, Any]]
     source_reliability: list[dict[str, Any]]
+    executive_municipality_summary_board: list[dict[str, Any]] = Field(default_factory=list)
+    executive_top_risk_aoi_digest: list[dict[str, Any]] = Field(default_factory=list)
+    executive_supply_impact_estimator: dict[str, Any] = Field(default_factory=dict)
+    executive_intervention_planning_board: list[dict[str, Any]] = Field(default_factory=list)

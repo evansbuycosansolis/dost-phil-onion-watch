@@ -232,4 +232,106 @@ Updated: 2026-03-07
 - [x] Geospatial config health checker
 - [x] Geospatial self-test diagnostics suite
 
+## New backlog intake (2026-03-07)
+
+- [x] AOI adaptive threshold tuning
+- [x] AOI threshold simulation sandbox
+- [x] AOI intervention recommendation engine
+- [x] AOI intervention effectiveness tracker
+- [x] AOI crop-rotation history panel
+- [x] AOI parcel subdivision support
+- [x] AOI merged-parcel support
+- [x] AOI historical ownership ledger
+- [x] AOI customs import linkage
+- [x] AOI warehouse stock correlation
+- [x] AOI market price correlation panel
+- [x] AOI transport disruption overlay
+- [x] AOI road accessibility score
+- [x] AOI typhoon exposure overlay
+- [x] AOI rainfall deficit alert
+- [x] AOI pest outbreak overlay
+- [x] AOI disease outbreak overlay
+- [x] AOI fertilizer application schedule
+- [x] AOI irrigation event log
+- [x] AOI manual sampling record
+- [x] AOI confidence waiver workflow
+- [x] AOI exception case register
+- [x] AOI dispute resolution trail
+- [x] AOI community feedback intake
+- [x] AOI multilingual labels
+- [x] AOI local-language summary export
+- [x] AOI barangay-level breakdown
+- [x] AOI province drill-across links
+- [x] AOI crop calendar overlay
+- [x] AOI recommended action checklist
+- [x] AOI readiness score for inspection
+- [x] AOI compliance evidence bundle
+- [x] AOI satellite-source preference policy
+- [x] AOI source exclusion policy
+- [x] AOI retention policy controls
+- [x] AOI legal hold flag
+- [x] AOI privacy redaction mode
+- [x] AOI export watermarking
+- [x] AOI signed summary verification
+- [x] AOI QR-coded printable report
+- [x] Geospatial notification center
+- [x] Geospatial inbox triage queue
+- [x] Geospatial analyst workload board
+- [x] Geospatial unresolved anomaly queue
+- [x] Geospatial escalation dashboard
+- [x] Geospatial watchtower map wallboard
+- [x] Geospatial KPI threshold alerts
+- [x] Geospatial readiness checklist
+- [x] Geospatial deployment guardrail checks
+- [x] Geospatial configuration drift alert
+- [x] Run approval gate before release
+- [x] Run publish/unpublish workflow
+- [x] Run artifact retention policy
+- [x] Run cold-storage archive action
+- [x] Run archive restore action
+- [x] Run immutable evidence record
+- [x] Run digital signature verification
+- [x] Run provenance notarization stub
+- [x] Run chain-of-custody timeline
+- [x] Run decision log
+- [x] Run governance attestation
+- [x] Run reviewer assignment
+- [x] Run reviewer checklist
+- [x] Run review comment threads
+- [x] Run merge/reconcile duplicate runs
+- [x] Run split combined runs
+- [x] Run scenario replay
+- [x] Run dry-run preview
+- [x] Run synthetic test data mode
+- [x] Run red-team anomaly injection
+- [x] Scene polygon clipping preview
+- [x] Scene AOI boundary mismatch detector
+- [x] Scene solar-angle metadata panel
+- [x] Scene orbit-path metadata panel
+- [x] Scene georegistration quality score
+- [x] Scene acquisition consistency checker
+- [x] Scene pre-processing recipe viewer
+- [x] Scene normalization diagnostics
+- [x] Scene radiometric anomaly detector
+- [x] Scene missing-tile detector
+- [x] Scene corrupt asset detector
+- [x] Scene alternate-source substitution
+- [x] Scene provenance chain viewer
+- [x] Scene tile cache inspector
+- [x] Scene downsampled quicklook gallery
+- [x] Feature threshold what-if simulator
+- [x] Feature cross-source consensus score
+- [x] Feature temporal persistence score
+- [x] Feature neighborhood agreement score
+- [x] Feature geospatial confidence map
+- [x] Feature human-review priority score
+- [x] Feature linked scene gallery
+- [x] Feature evidence card export
+- [x] Feature annotation version history
+- [x] Feature review SLA timer
+- [x] Executive anomaly brief generator
+- [x] Executive municipality summary board
+- [x] Executive top-risk AOI digest
+- [x] Executive supply impact estimator
+- [x] Executive intervention planning board
 

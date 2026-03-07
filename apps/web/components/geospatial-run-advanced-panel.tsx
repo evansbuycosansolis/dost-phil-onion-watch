@@ -171,6 +171,48 @@ type RunArtifactDownloadCenter = {
   }>;
 };
 
+type RunCommandCenter = {
+  run_approval_gate_before_release?: {
+    status?: string;
+    release_blocked?: boolean;
+    review_required?: boolean;
+    workflow_id?: number | null;
+    requested_at?: string | null;
+    reviewed_at?: string | null;
+    requested_by?: number | null;
+    reviewed_by?: number | null;
+    notes?: string | null;
+    next_action?: string;
+  };
+  run_chain_of_custody_timeline?: {
+    event_count?: number;
+    events?: Array<{
+      timestamp?: string;
+      event_type?: string;
+      summary?: string;
+      actor_user_id?: number | null;
+    }>;
+  };
+  run_publish_unpublish_workflow?: Record<string, unknown>;
+  run_artifact_retention_policy?: Record<string, unknown>;
+  run_cold_storage_archive_action?: Record<string, unknown>;
+  run_archive_restore_action?: Record<string, unknown>;
+  run_immutable_evidence_record?: Record<string, unknown>;
+  run_digital_signature_verification?: Record<string, unknown>;
+  run_provenance_notarization_stub?: Record<string, unknown>;
+  run_decision_log?: Array<Record<string, unknown>>;
+  run_governance_attestation?: Record<string, unknown>;
+  run_reviewer_assignment?: Record<string, unknown>;
+  run_reviewer_checklist?: Array<Record<string, unknown>>;
+  run_review_comment_threads?: Array<Record<string, unknown>>;
+  run_merge_reconcile_duplicate_runs?: Record<string, unknown>;
+  run_split_combined_runs?: Record<string, unknown>;
+  run_scenario_replay?: Record<string, unknown> | null;
+  run_dry_run_preview?: Record<string, unknown>;
+  run_synthetic_test_data_mode?: Record<string, unknown>;
+  run_red_team_anomaly_injection?: Record<string, unknown>;
+};
+
 type FilterPreset = {
   id: number;
   preset_type: string;
@@ -276,6 +318,11 @@ export function GeospatialRunAdvancedPanel({ token, runId }: { token?: string | 
   const artifactDownloadCenter = useQuery({
     queryKey: ["geospatial-run-artifact-download-center", token, runId],
     queryFn: () => apiFetch<RunArtifactDownloadCenter>(`/api/v1/geospatial/runs/${runId}/artifacts/download-center`, { token }),
+    enabled: !!token,
+  });
+  const commandCenter = useQuery({
+    queryKey: ["geospatial-run-command-center", token, runId],
+    queryFn: () => apiFetch<RunCommandCenter>(`/api/v1/geospatial/runs/${runId}/operations/command-center`, { token }),
     enabled: !!token,
   });
 
@@ -385,6 +432,84 @@ export function GeospatialRunAdvancedPanel({ token, runId }: { token?: string | 
     },
     onError: () => setMessage("Failed to save filter preset"),
   });
+  const approvalGateMutation = useMutation({
+    mutationFn: async (status: "requested" | "approved" | "rejected") =>
+      apiFetch(`/api/v1/geospatial/runs/${runId}/operations/approval-gate`, {
+        token,
+        method: "POST",
+        body: {
+          status,
+          notes: `Advanced panel set approval gate to ${status}`,
+        },
+      }),
+    onSuccess: async () => {
+      setMessage("Run approval gate updated");
+      await queryClient.invalidateQueries({ queryKey: ["geospatial-run-command-center", token, runId] });
+    },
+    onError: () => setMessage("Run approval gate update failed"),
+  });
+  const publishMutation = useMutation({
+    mutationFn: async (action: "publish" | "unpublish") =>
+      apiFetch(`/api/v1/geospatial/runs/${runId}/operations/publish`, {
+        token,
+        method: "POST",
+        body: { action, channel: "executive" },
+      }),
+    onSuccess: async () => {
+      setMessage("Run publish workflow updated");
+      await queryClient.invalidateQueries({ queryKey: ["geospatial-run-command-center", token, runId] });
+    },
+    onError: () => setMessage("Run publish workflow update failed"),
+  });
+  const archiveMutation = useMutation({
+    mutationFn: async (action: "archive" | "restore") =>
+      apiFetch(`/api/v1/geospatial/runs/${runId}/operations/archive`, {
+        token,
+        method: "POST",
+        body: { action, tier: "cold", retention_days: 365 },
+      }),
+    onSuccess: async () => {
+      setMessage("Run archive workflow updated");
+      await queryClient.invalidateQueries({ queryKey: ["geospatial-run-command-center", token, runId] });
+    },
+    onError: () => setMessage("Run archive workflow update failed"),
+  });
+  const governanceMutation = useMutation({
+    mutationFn: async (action: "decision" | "attest" | "comment") =>
+      apiFetch(`/api/v1/geospatial/runs/${runId}/operations/governance`, {
+        token,
+        method: "POST",
+        body:
+          action === "decision"
+            ? { action, decision: "approve_release", notes: "Advanced panel governance decision" }
+            : action === "attest"
+            ? { action, status: "attested", notes: "Governance attestation from advanced panel" }
+            : { action, comment: "Review comment from advanced panel", thread_id: "default" },
+      }),
+    onSuccess: async () => {
+      setMessage("Run governance updated");
+      await queryClient.invalidateQueries({ queryKey: ["geospatial-run-command-center", token, runId] });
+    },
+    onError: () => setMessage("Run governance update failed"),
+  });
+  const scenarioMutation = useMutation({
+    mutationFn: async (action: "replay" | "dry_run" | "synthetic_test" | "red_team_injection") =>
+      apiFetch(`/api/v1/geospatial/runs/${runId}/operations/scenario`, {
+        token,
+        method: "POST",
+        body: {
+          action,
+          enabled: true,
+          dataset: "synthetic-default",
+          injection_type: "anomaly_spike",
+        },
+      }),
+    onSuccess: async () => {
+      setMessage("Run scenario operations updated");
+      await queryClient.invalidateQueries({ queryKey: ["geospatial-run-command-center", token, runId] });
+    },
+    onError: () => setMessage("Run scenario operations update failed"),
+  });
 
   const sceneRows = useMemo(() => scenes.data?.rows ?? [], [scenes.data?.rows]);
   const featureRows = useMemo(() => features.data?.rows ?? [], [features.data?.rows]);
@@ -436,7 +561,7 @@ export function GeospatialRunAdvancedPanel({ token, runId }: { token?: string | 
         {diagnostics.isLoading ? <LoadingState label="Loading run diagnostics..." /> : null}
         {diagnostics.error ? <ErrorState message="Failed to load run diagnostics" /> : null}
         {diagnostics.data ? (
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="grid gap-4 xl:grid-cols-3">
             <Card title="Execution Health, SLA, Throughput, and Source Coverage">
               <div className="space-y-2 text-xs text-slate-700">
                 <div>Status: <span className="font-semibold">{diagnostics.data.status}</span> · Health badge: <span className="font-semibold">{diagnostics.data.health_badge}</span></div>
@@ -484,6 +609,61 @@ export function GeospatialRunAdvancedPanel({ token, runId }: { token?: string | 
                   ))}
                 </div>
               </div>
+            </Card>
+            <Card title="Run Approval Gate and Chain-of-Custody">
+              {commandCenter.isLoading ? <LoadingState label="Loading approval gate and custody timeline..." /> : null}
+              {commandCenter.error ? <ErrorState message="Failed to load approval gate and chain-of-custody timeline" /> : null}
+              {commandCenter.data ? (
+                <div className="space-y-2 text-xs text-slate-700">
+                  <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                    Approval gate: <span className="font-semibold">{commandCenter.data.run_approval_gate_before_release?.status ?? "not_requested"}</span> · release blocked: <span className="font-semibold">{String(commandCenter.data.run_approval_gate_before_release?.release_blocked ?? true)}</span>
+                  </div>
+                  <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+                    Next action: {commandCenter.data.run_approval_gate_before_release?.next_action ?? "request_review"} · workflow #{commandCenter.data.run_approval_gate_before_release?.workflow_id ?? "n/a"}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => approvalGateMutation.mutate("requested")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Request gate</button>
+                    <button type="button" onClick={() => approvalGateMutation.mutate("approved")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Approve gate</button>
+                    <button type="button" onClick={() => approvalGateMutation.mutate("rejected")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Reject gate</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => publishMutation.mutate("publish")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Publish</button>
+                    <button type="button" onClick={() => publishMutation.mutate("unpublish")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Unpublish</button>
+                    <button type="button" onClick={() => archiveMutation.mutate("archive")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Archive cold</button>
+                    <button type="button" onClick={() => archiveMutation.mutate("restore")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Restore archive</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => governanceMutation.mutate("decision")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Decision log</button>
+                    <button type="button" onClick={() => governanceMutation.mutate("comment")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Add comment</button>
+                    <button type="button" onClick={() => governanceMutation.mutate("attest")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Attest</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => scenarioMutation.mutate("replay")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Replay</button>
+                    <button type="button" onClick={() => scenarioMutation.mutate("dry_run")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Dry-run</button>
+                    <button type="button" onClick={() => scenarioMutation.mutate("synthetic_test")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Synthetic mode</button>
+                    <button type="button" onClick={() => scenarioMutation.mutate("red_team_injection")} className="rounded border border-slate-300 px-2 py-1 font-medium text-slate-700 hover:bg-slate-50">Red-team inject</button>
+                  </div>
+                  <div className="rounded border border-slate-200 bg-white px-2 py-1">
+                    Chain-of-custody timeline events: {commandCenter.data.run_chain_of_custody_timeline?.event_count ?? 0}
+                  </div>
+                  <div className="rounded border border-slate-200 bg-white px-2 py-1">
+                    Publish state: {String((commandCenter.data.run_publish_unpublish_workflow as { is_published?: boolean } | undefined)?.is_published ?? false)} · Archive tier: {String((commandCenter.data.run_cold_storage_archive_action as { archive_tier?: string } | undefined)?.archive_tier ?? "hot")}
+                  </div>
+                  <div className="rounded border border-slate-200 bg-white px-2 py-1">
+                    Signature verified: {String((commandCenter.data.run_digital_signature_verification as { verified?: boolean } | undefined)?.verified ?? false)} · Notary: {String((commandCenter.data.run_provenance_notarization_stub as { status?: string } | undefined)?.status ?? "n/a")}
+                  </div>
+                  <div className="rounded border border-slate-200 bg-white px-2 py-1">
+                    Decision log entries: {((commandCenter.data.run_decision_log as unknown[]) ?? []).length} · Review comments: {((commandCenter.data.run_review_comment_threads as unknown[]) ?? []).length}
+                  </div>
+                  <div className="max-h-28 overflow-y-auto rounded border border-slate-200 bg-white px-2 py-1">
+                    {(commandCenter.data.run_chain_of_custody_timeline?.events ?? []).slice(-8).map((event, index) => (
+                      <div key={`${event.timestamp ?? "na"}-${event.event_type ?? "event"}-${index}`}>
+                        {event.timestamp ?? "n/a"} · {event.event_type ?? "event"} · {event.summary ?? ""}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </Card>
           </div>
         ) : null}

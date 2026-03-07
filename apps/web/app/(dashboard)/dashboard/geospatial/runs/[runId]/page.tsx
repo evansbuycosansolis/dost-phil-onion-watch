@@ -80,6 +80,22 @@ type PaginatedProvenanceResponse<T> = {
   rows: T[];
 };
 
+type SceneProvenanceChainResponse = {
+  run_id: number;
+  source: string;
+  scene_id: string;
+  scene_found: boolean;
+  completed_steps: number;
+  total_steps: number;
+  latest_step: string | null;
+  timeline: Array<{
+    step: string;
+    timestamp: string | null;
+    status: string;
+    details: Record<string, unknown>;
+  }>;
+};
+
 type SortDirection = "asc" | "desc";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
@@ -709,6 +725,15 @@ export default function GeospatialRunDrilldownPage() {
       }
       return runDetail.data && ["queued", "running", "cancel_requested"].includes(runDetail.data.status) ? 4000 : false;
     },
+  });
+  const sceneProvenanceChain = useQuery({
+    queryKey: ["geospatial-run-scene-provenance-chain", token, runId, previewScene?.source, previewScene?.scene_id],
+    queryFn: () =>
+      apiFetch<SceneProvenanceChainResponse>(
+        `/api/v1/geospatial/runs/${runId}/scenes/provenance-chain?source=${encodeURIComponent(previewScene?.source ?? "")}&scene_id=${encodeURIComponent(previewScene?.scene_id ?? "")}`,
+        { token },
+      ),
+    enabled: isUrlStateReady && !!token && Number.isFinite(runId) && !!previewScene?.source && !!previewScene?.scene_id,
   });
 
   if (!Number.isFinite(runId)) {
@@ -1521,6 +1546,31 @@ export default function GeospatialRunDrilldownPage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="mt-6 rounded-lg border border-slate-200 p-4">
+              <div className="text-sm font-semibold text-slate-800">Scene provenance chain viewer</div>
+              {sceneProvenanceChain.isLoading ? (
+                <p className="mt-2 text-sm text-slate-500">Loading provenance chain...</p>
+              ) : null}
+              {sceneProvenanceChain.error ? (
+                <p className="mt-2 text-sm text-rose-600">Failed to load provenance chain.</p>
+              ) : null}
+              {sceneProvenanceChain.data ? (
+                <>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Completed steps: {sceneProvenanceChain.data.completed_steps}/{sceneProvenanceChain.data.total_steps} · latest step: {sceneProvenanceChain.data.latest_step ?? "n/a"}
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {sceneProvenanceChain.data.timeline.map((entry) => (
+                      <div key={`${entry.step}-${entry.timestamp ?? "na"}`} className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                        <div className="font-medium text-slate-800">{entry.step}</div>
+                        <div className="mt-1">Status: {entry.status} · Timestamp: {entry.timestamp ?? "n/a"}</div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
