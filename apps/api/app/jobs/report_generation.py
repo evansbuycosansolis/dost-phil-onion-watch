@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 
 from app.core.database import SessionLocal
+from app.services.report_distribution_service import queue_report_distribution
 from app.services.report_service import generate_report
 
 
@@ -20,7 +21,8 @@ def main() -> None:
     try:
         month = date.today().replace(day=1)
         for category in REPORT_CATEGORIES:
-            generate_report(db, category, month)
+            report = generate_report(db, category, month)
+            queue_report_distribution(db, report=report)
         db.commit()
     finally:
         db.close()

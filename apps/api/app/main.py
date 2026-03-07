@@ -4,6 +4,7 @@ from datetime import date
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 
 from app.api.v1 import (
@@ -18,6 +19,7 @@ from app.api.v1 import (
     documents,
     farmers,
     forecasting,
+    geospatial,
     imports,
     municipalities,
     prices,
@@ -36,6 +38,7 @@ from app.services.alert_service import generate_alerts_from_signals
 from app.services.anomaly_service import run_anomaly_detection
 from app.services.document_ingestion_service import rebuild_document_index
 from app.services.forecasting_service import run_forecasting
+from app.services.observability_service import get_observability_store
 from app.services.seed_service import seed_documents, seed_operational_data, seed_reference_data
 
 logger = get_logger(__name__)
@@ -54,7 +57,26 @@ app.add_middleware(CorrelationIdMiddleware)
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": settings.app_name}
+    store = get_observability_store()
+    api_summary = store.api_summary(window_minutes=15)
+    job_summary = store.job_summary(window_minutes=60)
+    degraded = len(api_summary["degraded_endpoints"])
+    failing_jobs = len(job_summary["failing_jobs"])
+    status = "degraded" if degraded > 0 or failing_jobs > 0 else "ok"
+    return {
+        "status": status,
+        "service": settings.app_name,
+        "degraded_endpoints": degraded,
+        "failing_jobs": failing_jobs,
+        "api_server_error_rate": api_summary["server_error_rate"],
+        "job_failure_rate": job_summary["failure_rate"],
+    }
+
+
+@app.get("/metrics", response_class=PlainTextResponse)
+def metrics() -> PlainTextResponse:
+    store = get_observability_store()
+    return PlainTextResponse(store.metrics_text(), media_type="text/plain; version=0.0.4")
 
 
 @app.on_event("startup")
@@ -112,5 +134,6 @@ app.include_router(alerts.router, prefix="/api/v1")
 app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
+app.include_router(geospatial.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")

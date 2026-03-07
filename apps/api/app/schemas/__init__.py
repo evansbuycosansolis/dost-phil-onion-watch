@@ -1,10 +1,35 @@
 from app.schemas.admin import AdminSettingUpdate
 from app.schemas.alerts import AlertActionRequest, AlertDTO
-from app.schemas.anomaly import AnomalyDTO, AnomalyRunRequest
-from app.schemas.auth import AuthSession, CurrentUser, LoginRequest, TokenResponse, UserSummary
+from app.schemas.anomaly import (
+    AnomalyDTO,
+    AnomalyRunRequest,
+    AnomalyRunResponse,
+    AnomalyThresholdConfigDTO,
+    AnomalyThresholdUpdateRequest,
+    AnomalyThresholdVersionDTO,
+)
+from app.schemas.auth import AuthSession, CurrentUser, LoginRequest, OIDCLoginRequest, TokenResponse, UserSummary
 from app.schemas.common import ApiMessage, Pagination
+from app.schemas.connectors import (
+    ConnectorApprovalDecisionRequest,
+    ConnectorApprovalDecisionResponse,
+    ConnectorApprovalWorkflowDTO,
+    ConnectorDefinitionDTO,
+    ConnectorIngestionItemResultDTO,
+    ConnectorIngestionRequest,
+    ConnectorIngestionResponseDTO,
+    ConnectorSubmissionDTO,
+)
 from app.schemas.dashboard import MunicipalSummary, ProvincialOverview, WarehouseOverviewRow
-from app.schemas.documents import DocumentResult, DocumentSearchRequest, DocumentSummary
+from app.schemas.documents import (
+    DocumentDetail,
+    DocumentIngestionJobDTO,
+    DocumentQueueProcessResponse,
+    DocumentResult,
+    DocumentSearchRequest,
+    DocumentSummary,
+    DocumentUploadResponse,
+)
 from app.schemas.domain import (
     FarmerCreate,
     HarvestReportCreate,
@@ -15,8 +40,28 @@ from app.schemas.domain import (
     WarehouseStockReportCreate,
 )
 from app.schemas.forecasting import ForecastOutputDTO, ForecastRunDTO, ForecastRunRequest
-from app.schemas.reports import ReportDTO, ReportExportMetadata, ReportGenerateRequest, ReportGenerateResponse
-from app.schemas.audit import AuditEventDTO
+from app.schemas.geospatial import AOICreateRequest, AOIDTO, AOIVersionDTO, GeospatialStatusDTO
+from app.schemas.mobile_sync import (
+    MobileSubmissionItem,
+    MobileSubmissionProvenance,
+    MobileSubmissionRecord,
+    MobileSubmissionResult,
+    MobileSyncRequest,
+    MobileSyncResponse,
+)
+from app.schemas.reports import (
+    ReportDTO,
+    ReportDeliveryLogDTO,
+    ReportDeliveryProcessResponse,
+    ReportDistributionQueueResponse,
+    ReportExportMetadata,
+    ReportGenerateRequest,
+    ReportGenerateResponse,
+    ReportRecipientGroupCreate,
+    ReportRecipientGroupDTO,
+    ReportRecipientGroupUpdate,
+)
+from app.schemas.audit import AuditDiffEntryDTO, AuditDiffSummaryDTO, AuditEventDTO, AuditEventDiffDTO
 
 __all__ = [
     "AdminSettingUpdate",
@@ -24,29 +69,65 @@ __all__ = [
     "AlertDTO",
     "AnomalyDTO",
     "AnomalyRunRequest",
+    "AnomalyRunResponse",
+    "AnomalyThresholdConfigDTO",
+    "AnomalyThresholdUpdateRequest",
+    "AnomalyThresholdVersionDTO",
     "ApiMessage",
+    "ConnectorApprovalDecisionRequest",
+    "ConnectorApprovalDecisionResponse",
+    "ConnectorApprovalWorkflowDTO",
+    "ConnectorDefinitionDTO",
+    "ConnectorIngestionItemResultDTO",
+    "ConnectorIngestionRequest",
+    "ConnectorIngestionResponseDTO",
+    "ConnectorSubmissionDTO",
     "AuditEventDTO",
+    "AuditEventDiffDTO",
+    "AuditDiffSummaryDTO",
+    "AuditDiffEntryDTO",
     "AuthSession",
     "CurrentUser",
     "DocumentResult",
     "DocumentSearchRequest",
     "DocumentSummary",
+    "DocumentDetail",
+    "DocumentIngestionJobDTO",
+    "DocumentQueueProcessResponse",
+    "DocumentUploadResponse",
     "FarmerCreate",
     "ForecastOutputDTO",
     "ForecastRunDTO",
     "ForecastRunRequest",
+    "AOICreateRequest",
+    "AOIDTO",
+    "AOIVersionDTO",
+    "GeospatialStatusDTO",
     "HarvestReportCreate",
     "ImportRecordCreate",
     "LoginRequest",
+    "MobileSubmissionItem",
+    "MobileSubmissionProvenance",
+    "MobileSubmissionRecord",
+    "MobileSubmissionResult",
+    "MobileSyncRequest",
+    "MobileSyncResponse",
+    "OIDCLoginRequest",
     "MunicipalityCreate",
     "MunicipalSummary",
     "Pagination",
     "PriceReportCreate",
     "ProvincialOverview",
     "ReportDTO",
+    "ReportDeliveryLogDTO",
+    "ReportDeliveryProcessResponse",
+    "ReportDistributionQueueResponse",
     "ReportExportMetadata",
     "ReportGenerateRequest",
     "ReportGenerateResponse",
+    "ReportRecipientGroupCreate",
+    "ReportRecipientGroupDTO",
+    "ReportRecipientGroupUpdate",
     "TokenResponse",
     "UserSummary",
     "WarehouseCreate",

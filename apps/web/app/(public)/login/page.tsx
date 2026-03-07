@@ -35,8 +35,11 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-brand-800">DOST Phil Onion Watch</h1>
         <p className="mt-1 text-sm text-slate-600">Sign in with seeded role accounts.</p>
 
-        <label className="mt-4 block text-sm font-medium text-slate-700">Email</label>
+        <label htmlFor="email" className="mt-4 block text-sm font-medium text-slate-700">
+          Email
+        </label>
         <input
+          id="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
@@ -44,8 +47,11 @@ export default function LoginPage() {
           required
         />
 
-        <label className="mt-3 block text-sm font-medium text-slate-700">Password</label>
+        <label htmlFor="password" className="mt-3 block text-sm font-medium text-slate-700">
+          Password
+        </label>
         <input
+          id="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"

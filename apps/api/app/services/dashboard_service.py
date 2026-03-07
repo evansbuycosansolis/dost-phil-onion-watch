@@ -27,6 +27,8 @@ from app.models import (
     RetailPriceReport,
 )
 from app.schemas.auth import CurrentUser
+from app.services.forecasting_service import latest_model_diagnostics
+from app.services.report_distribution_service import distribution_status_summary
 
 
 READONLY_GLOBAL_ROLES = {"super_admin", "provincial_admin", "market_analyst", "policy_reviewer", "executive_viewer", "auditor"}
@@ -402,6 +404,8 @@ def alerts_overview(db: Session, current_user: CurrentUser) -> dict:
 
 
 def reports_overview(db: Session, current_user: CurrentUser) -> dict:
+    diagnostics = latest_model_diagnostics(db)
+    delivery_status = distribution_status_summary(db)
     reports = db.execute(
         select(ReportRecord.id, ReportRecord.category, ReportRecord.title, ReportRecord.reporting_month, ReportRecord.status, ReportRecord.file_path)
         .order_by(ReportRecord.generated_at.desc())
@@ -425,6 +429,14 @@ def reports_overview(db: Session, current_user: CurrentUser) -> dict:
             for rid, category, title, month, status, path in reports
         ],
         "monthly_summary": [{"reporting_month": month, "count": count} for month, count in monthly_counts],
+        "forecast_model_diagnostics": {
+            "run_id": diagnostics.get("run_id"),
+            "selected_model_counts": diagnostics.get("selected_model_counts", {}),
+            "model_avg_score": diagnostics.get("model_avg_score", {}),
+            "model_avg_holdout_mae": diagnostics.get("model_avg_holdout_mae", {}),
+            "municipalities_covered": len(diagnostics.get("municipality_diagnostics", [])),
+        },
+        "report_distribution_status": delivery_status,
     }
 
 

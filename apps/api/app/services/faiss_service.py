@@ -53,15 +53,23 @@ class FaissStore:
     def _load(self) -> None:
         if self.metadata_path.exists():
             self.metadata = json.loads(self.metadata_path.read_text(encoding="utf-8"))
-        if faiss is not None and self.index_path.exists():
-            self.index = faiss.read_index(str(self.index_path))
-        elif self.index_path.exists():
-            try:
-                with self.index_path.open("rb") as stream:
-                    self._vectors = np.load(stream, allow_pickle=False)
-            except Exception:
+        if not self.index_path.exists():
+            if faiss is None:
                 self._vectors = np.empty((0, self.dim), dtype=np.float32)
-        elif faiss is None:
+            return
+
+        if faiss is not None:
+            try:
+                self.index = faiss.read_index(str(self.index_path))
+                self._vectors = None
+                return
+            except Exception:
+                self.index = None
+
+        try:
+            with self.index_path.open("rb") as stream:
+                self._vectors = np.load(stream, allow_pickle=False)
+        except Exception:
             self._vectors = np.empty((0, self.dim), dtype=np.float32)
 
     def _save(self) -> None:

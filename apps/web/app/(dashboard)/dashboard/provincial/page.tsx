@@ -77,6 +77,8 @@ export default function ProvincialDashboardPage() {
               { key: "anomaly_type", label: "Type" },
               { key: "severity", label: "Severity", render: (row) => <SeverityPill severity={String(row.severity)} /> },
               { key: "scope_type", label: "Scope" },
+              { key: "metrics", label: "Score", render: (row) => String((row.metrics as Record<string, unknown>)?.final_score ?? "n/a") },
+              { key: "metrics", label: "Why Fired", render: (row) => String((row.metrics as Record<string, unknown>)?.explanation ?? "n/a") },
               { key: "summary", label: "Summary" },
             ]}
             rows={anomalies.data.slice(0, 8)}

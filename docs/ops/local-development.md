@@ -48,10 +48,28 @@ Default password for seeded accounts: `ChangeMe123!`
 - `executive_viewer@onionwatch.ph`
 - `auditor@onionwatch.ph`
 
+## OIDC authentication (optional)
+
+- Enable OIDC by setting `OIDC_ENABLED=true` and configuring issuer/discovery/JWKS/audience values in `apps/api/.env`.
+- Use `POST /api/v1/auth/oidc/login` with an IdP `id_token`.
+- Role mapping is controlled by `OIDC_ROLE_MAPPING` (e.g. `dost_super_admin:super_admin`).
+- Privileged mapped roles require MFA claims before login succeeds.
+
 ## Useful local commands
 
 - Seed + bootstrap API: `python scripts/seed_api.py`
 - Trigger monthly pipeline: `python scripts/run_monthly_pipeline.py`
 - Start background scheduler worker: `python -m app.jobs.worker` (from `apps/api`)
+- Manually process queued document ingestions: `POST /api/v1/documents/jobs/process`
+- Manually process report distribution queue: `POST /api/v1/reports/distribution/process`
+- Run connector ingestion for a specific source: `POST /api/v1/admin/connectors/{connector_key}/ingest`
+- Review pending connector approvals: `GET /api/v1/admin/connectors/approvals?status=pending`
+- Scrape Prometheus metrics: `GET /metrics`
+- Inspect observability summary: `GET /api/v1/admin/observability/overview`
 - Run API tests: `pytest apps/api/app/tests -q`
 - Build workspace: `pnpm build`
+
+## Feed fixtures
+
+- Default feed fixture directory: `data/fixtures/feeds`
+- Configure with `AGENCY_FEED_FIXTURES_PATH` in `apps/api/.env`.

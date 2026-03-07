@@ -23,7 +23,9 @@
 - Postgres (or sqlite for tests) is operational truth.
 - FastAPI routers expose `api/v1/*` families for domain operations and read-only dashboard aggregators.
 - Services encapsulate forecasting, anomaly detection, alert generation, report generation, and document indexing.
+- Connector services encapsulate agency feed adapters, validation/normalization stages, and approval-gated application into operational truth tables.
 - RBAC is fail-closed via reusable `require_role` dependency.
+- Authentication supports local JWT login and optional OIDC IdP integration with role mapping and MFA checks for privileged roles.
 - Audit events are emitted for critical mutations.
 
 ### Document intelligence
@@ -40,3 +42,9 @@ The baseline is structured for:
 - expanded geography beyond Occidental Mindoro,
 - mobile and partner integrations,
 - external data feeds and intervention pipelines.
+
+### Geospatial surveillance
+
+Phil Onion Watch includes an AOI-first geospatial surveillance design that ingests multi-source remote sensing observations (Sentinel-2, Sentinel-1, HLS, Landsat, MODIS) and converts them into auditable AOI-level features for dashboards and intelligence services.
+
+See [docs/architecture/geospatial-surveillance.md](geospatial-surveillance.md).

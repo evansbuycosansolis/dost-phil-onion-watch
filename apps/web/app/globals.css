@@ -18,3 +18,22 @@ body {
 * {
   box-sizing: border-box;
 }
+
+.leaflet-container {
+  font-family: inherit;
+}
+
+.aoi-map-handle-wrapper {
+  background: transparent;
+  border: none;
+}
+
+.aoi-map-handle {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: #2563eb;
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.35);
+}

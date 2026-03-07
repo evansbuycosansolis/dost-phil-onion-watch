@@ -22,19 +22,19 @@ function normalizeUser(raw: Record<string, unknown>): SessionUser {
     fullName: String(raw.full_name),
     roles: (raw.roles as SessionUser["roles"]) ?? [],
     municipalityId: raw.municipality_id ? Number(raw.municipality_id) : undefined,
+    authSource: raw.auth_source ? String(raw.auth_source) : undefined,
+    mfaVerified: raw.mfa_verified === undefined ? undefined : Boolean(raw.mfa_verified),
   };
 }
 
 function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setTokenState] = useState<string | undefined>(undefined);
-  const [user, setUser] = useState<SessionUser | undefined>(undefined);
-
-  useEffect(() => {
-    const savedToken = window.localStorage.getItem("pow_token") ?? undefined;
-    if (savedToken) {
-      setTokenState(savedToken);
+  const [token, setTokenState] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") {
+      return undefined;
     }
-  }, []);
+    return window.localStorage.getItem("pow_token") ?? undefined;
+  });
+  const [user, setUser] = useState<SessionUser | undefined>(undefined);
 
   const refreshUser = useCallback(async () => {
     if (!token) {

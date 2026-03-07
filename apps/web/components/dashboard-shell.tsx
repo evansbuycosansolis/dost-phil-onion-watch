@@ -33,6 +33,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
     ];
     const hasAdminRole = (user?.roles ?? []).some((role) => adminRoles.has(role));
     if (hasAdminRole) {
+      base.push({ href: routes.dashboardGeospatialAOIs, label: "Geospatial" });
+      base.push({ href: routes.dashboardGeospatialExecutive, label: "Geo Executive" });
+      base.push({ href: routes.dashboardGeospatialIntelligence, label: "Geo Intel" });
       base.push({ href: routes.dashboardAdmin, label: "Admin" });
     }
     return base;

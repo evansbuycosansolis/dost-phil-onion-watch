@@ -1,0 +1,3 @@
+external_id,municipality_code,warehouse_name,report_date,reporting_month,current_stock_tons,inflow_tons,outflow_tons
+NFA-STK-20260301-SJ,OM-SJ,San Jose Onion Warehouse,2026-03-01,2026-03-01,145.2,34.0,22.5
+NFA-STK-20260301-BAD,OM-SJ,Missing Warehouse,2026-03-01,2026-03-01,80,10,12

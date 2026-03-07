@@ -19,6 +19,8 @@ Implemented roles:
 - Route handlers must explicitly call `require_role(...)`.
 - Missing role intersection returns `403`.
 - Dashboard responses apply role scope filtering for municipal and warehouse operators.
+- Optional OIDC login path supports external role claims mapped to local roles at login.
+- Privileged OIDC role assignments require MFA claims (`amr`/`acr`/boolean claim checks) before token issuance.
 
 ## High-level permissions
 
@@ -38,9 +40,14 @@ Audit events are emitted for key mutations including:
 - stock and price updates,
 - import creation,
 - alert acknowledge/resolve transitions,
-- document upload/reindex,
+- document upload queueing, queue processing, and reindex,
 - report generation,
+- report distribution group create/update,
+- report delivery queueing, retry scheduling, success, and terminal failure,
 - admin pipeline and settings actions.
+- anomaly threshold tuning and version updates.
+- mobile sync batch processing with per-submission status events (`accepted`, `updated`, `duplicate`, `conflict`, `rejected`) including provenance tags.
+- agency connector ingestion and approval decisions (`connector.ingestion.*`, `connector.approval.*`) with source-provenance metadata.
 
 Each event stores:
 
@@ -51,5 +58,12 @@ Each event stores:
 - before/after payloads (when applicable),
 - correlation id,
 - optional metadata payload.
+
+## Operational observability controls
+
+- Request-level correlation IDs are propagated through API responses (`x-correlation-id`).
+- API and background jobs publish runtime metrics for latency, error rates, and failure rates.
+- Admin-only observability endpoints expose degraded endpoint and failing job indicators.
+- Notification webhook integration emits alerts for job failures and degraded service conditions.
 
 Access to `GET /api/v1/audit/events` is restricted to governance-capable roles (`super_admin`, `provincial_admin`, `auditor`).

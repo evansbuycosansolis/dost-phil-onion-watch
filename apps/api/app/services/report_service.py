@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import Alert, Municipality, ReportRecord, Warehouse, WarehouseStockReport
+from app.services.forecasting_service import latest_model_diagnostics
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -28,10 +29,50 @@ def _report_filename(category: str, reporting_month: date) -> str:
     return f"{category}_{reporting_month.isoformat()}.md"
 
 
+def _forecast_diagnostics_summary(db: Session) -> tuple[list[str], dict[str, object]]:
+    diagnostics = latest_model_diagnostics(db)
+    run_id = diagnostics.get("run_id")
+    selected_model_counts = diagnostics.get("selected_model_counts", {})
+    avg_scores = diagnostics.get("model_avg_score", {})
+    avg_mae = diagnostics.get("model_avg_holdout_mae", {})
+    municipalities = diagnostics.get("municipality_diagnostics", [])
+
+    summary = {
+        "run_id": run_id,
+        "selected_model_counts": selected_model_counts,
+        "model_avg_score": avg_scores,
+        "model_avg_holdout_mae": avg_mae,
+        "municipalities_covered": len(municipalities),
+    }
+
+    if run_id is None:
+        return (["## Forecast Model Diagnostics", "- No forecast run available yet."], summary)
+
+    top_municipalities = municipalities[:5]
+    lines = [
+        "## Forecast Model Diagnostics",
+        f"- Forecast run id: {run_id}",
+        f"- Selected model counts: {selected_model_counts}",
+        f"- Average model score: {avg_scores}",
+        f"- Average holdout MAE: {avg_mae}",
+        "",
+        "### Municipality Selection Snapshot",
+    ]
+    for row in top_municipalities:
+        lines.append(
+            f"- {row.get('municipality_name')}: {row.get('selected_model')} "
+            f"(score={row.get('selected_score')}, fallback={row.get('fallback_order')})"
+        )
+    if not top_municipalities:
+        lines.append("- No municipality diagnostics captured.")
+    return lines, summary
+
+
 def generate_report(db: Session, category: str, reporting_month: date, generated_by: int | None = None) -> ReportRecord:
     reports_path = _ensure_reports_path()
     filename = _report_filename(category, reporting_month)
     path = reports_path / filename
+    diagnostics_lines, diagnostics_summary = _forecast_diagnostics_summary(db)
 
     if category == "provincial_exec_summary":
         alerts = db.scalars(select(Alert).where(Alert.status.in_(["open", "acknowledged"]))).all()
@@ -43,6 +84,8 @@ def generate_report(db: Session, category: str, reporting_month: date, generated
                 "",
                 "## Alerts",
                 *[f"- [{a.severity}] {a.title} ({a.status})" for a in alerts],
+                "",
+                *diagnostics_lines,
             ]
         )
         title = f"Provincial Executive Summary - {reporting_month.strftime('%B %Y')}"
@@ -69,12 +112,14 @@ def generate_report(db: Session, category: str, reporting_month: date, generated
                 "",
                 "## Included Municipalities",
                 *[f"- {m.name}" for m in municipalities],
+                "",
+                *diagnostics_lines,
             ]
         )
         title = f"Municipality Summary - {reporting_month.strftime('%B %Y')}"
     elif category == "price_trend":
         title = f"Price Trend Report - {reporting_month.strftime('%B %Y')}"
-        content = "\n".join([f"# {title}", "", "Price trend analytics are generated from market reports."])
+        content = "\n".join([f"# {title}", "", "Price trend analytics are generated from market reports.", "", *diagnostics_lines])
     elif category == "alert_digest":
         alerts = db.scalars(select(Alert).order_by(Alert.opened_at.desc()).limit(50)).all()
         title = f"Alert Digest - {reporting_month.strftime('%B %Y')}"
@@ -84,6 +129,8 @@ def generate_report(db: Session, category: str, reporting_month: date, generated
                 "",
                 "## Recent Alerts",
                 *[f"- {a.title} | {a.alert_type} | {a.severity} | {a.status}" for a in alerts],
+                "",
+                *diagnostics_lines,
             ]
         )
     else:
@@ -99,7 +146,10 @@ def generate_report(db: Session, category: str, reporting_month: date, generated
         file_path=str(path),
         status="generated",
         generated_by=generated_by,
-        metadata_json={"generated_at": datetime.utcnow().isoformat()},
+        metadata_json={
+            "generated_at": datetime.utcnow().isoformat(),
+            "forecast_model_diagnostics": diagnostics_summary,
+        },
     )
     db.add(record)
     db.flush()

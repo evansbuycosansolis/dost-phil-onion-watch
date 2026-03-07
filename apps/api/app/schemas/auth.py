@@ -7,10 +7,16 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class OIDCLoginRequest(BaseModel):
+    id_token: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     expires_in_minutes: int
+    auth_source: str | None = None
+    mfa_verified: bool | None = None
 
 
 class CurrentUser(BaseModel):
@@ -19,6 +25,8 @@ class CurrentUser(BaseModel):
     full_name: str
     roles: list[str]
     municipality_id: int | None = None
+    auth_source: str | None = None
+    mfa_verified: bool | None = None
 
 
 class UserSummary(BaseModel):

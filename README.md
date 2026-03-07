@@ -82,6 +82,14 @@ Default password: `ChangeMe123!`
 - `executive_viewer@onionwatch.ph`
 - `auditor@onionwatch.ph`
 
+## OIDC (optional)
+
+`/api/v1/auth/oidc/login` supports external identity-provider login with:
+
+- OIDC discovery/JWKS token verification,
+- external-to-local role mapping (`OIDC_ROLE_MAPPING`),
+- MFA requirement checks for privileged roles (`OIDC_PRIVILEGED_ROLES`).
+
 ## Core API families
 
 - `/api/v1/auth/*`
@@ -129,7 +137,9 @@ python scripts/run_monthly_pipeline.py
 - monthly pipeline execution,
 - alert refresh,
 - report generation,
-- document reindex.
+- report distribution,
+- document reindex,
+- observability monitor and degraded-service alerting.
 
 Retry and notification controls (via `apps/api/.env`):
 
@@ -153,6 +163,37 @@ Reports API now supports export metadata and downloadable artifacts:
 - `GET /api/v1/reports/{report_id}/download/csv`
 - `GET /api/v1/reports/{report_id}/download/pdf`
 
+## Mobile submission sync contract
+
+Municipal/mobile clients can sync batched submissions through:
+
+- `POST /api/v1/production/mobile-sync`
+- `GET /api/v1/production/mobile-sync/submissions`
+
+Contract behavior:
+
+- per-item idempotency via `idempotency_key` and payload hash checks,
+- optimistic conflict protection via `observed_server_updated_at`,
+- provenance capture (`client_id`, `device_id`, `app_version`, `sync_batch_id`, correlation id),
+- audit tagging per submission status and batch summary.
+
+## Agency feed connector ingestion
+
+Agency feed adapters support staged ingestion with validation, normalization, and approval:
+
+- `GET /api/v1/admin/connectors`
+- `POST /api/v1/admin/connectors/{connector_key}/ingest`
+- `GET /api/v1/admin/connectors/submissions`
+- `GET /api/v1/admin/connectors/approvals`
+- `POST /api/v1/admin/connectors/approvals/{workflow_id}/approve`
+- `POST /api/v1/admin/connectors/approvals/{workflow_id}/reject`
+
+Supported connectors in this baseline:
+
+- `da_price_feed`
+- `boc_import_feed`
+- `nfa_warehouse_stock_feed`
+
 ## Tests
 
 API tests are under `apps/api/app/tests` and cover:
@@ -169,6 +210,19 @@ API tests are under `apps/api/app/tests` and cover:
 ```bash
 pytest apps/api/app/tests -q
 ```
+
+Web E2E release confidence tests (cross-role login, dashboard navigation, alerts lifecycle, report export):
+
+```bash
+pnpm --filter @phil-onion-watch/web exec playwright install --with-deps chromium
+pnpm --filter @phil-onion-watch/web test:e2e
+```
+
+## Observability
+
+- `GET /metrics` exports request, endpoint, and background job metrics (Prometheus text format).
+- `GET /api/v1/admin/observability/overview` provides actionable error-rate/latency/job-failure summaries.
+- `GET /api/v1/admin/observability/traces/{correlation_id}` links API requests and job runs through correlation IDs.
 
 ## Notes
 
