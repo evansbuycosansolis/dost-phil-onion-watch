@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -140,13 +140,13 @@ def ingest_document(
         row.status = "processed"
         row.retry_count = 0
         row.failure_reason = None
-        row.processed_at = datetime.utcnow()
+        row.processed_at = datetime.now(timezone.utc)
 
     document.summary = text[:480] if text else "No extractable text content"
     document.status = "processed"
     document.index_status = "pending"
     document.failure_reason = None
-    document.last_processed_at = datetime.utcnow()
+    document.last_processed_at = datetime.now(timezone.utc)
     _refresh_document_progress(db, document)
     db.flush()
     return document
@@ -180,7 +180,7 @@ def queue_document_upload(
     job = DocumentIngestionJob(
         document_id=document.id,
         status="queued",
-        queued_at=datetime.utcnow(),
+        queued_at=datetime.now(timezone.utc),
         attempt_count=0,
         max_attempts=_job_max_attempts(),
         requested_by=uploaded_by,
@@ -207,12 +207,12 @@ def _process_chunk_embeddings(db: Session, document: Document) -> tuple[int, int
     )
 
     for chunk in pending_chunks:
-        chunk.last_attempt_at = datetime.utcnow()
+        chunk.last_attempt_at = datetime.now(timezone.utc)
         try:
             chunk.embedding_vector = store.embedder.embed(chunk.content).astype(float).tolist()
             chunk.status = "processed"
             chunk.failure_reason = None
-            chunk.processed_at = datetime.utcnow()
+            chunk.processed_at = datetime.now(timezone.utc)
         except Exception as exc:
             chunk.retry_count += 1
             chunk.failure_reason = str(exc)[:1000]
@@ -258,13 +258,13 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
     document = db.scalar(select(Document).where(Document.id == job.document_id))
     if not document:
         job.status = "failed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.last_error = f"Document {job.document_id} not found"
         db.flush()
         return job
 
     job.status = "running"
-    job.started_at = datetime.utcnow()
+    job.started_at = datetime.now(timezone.utc)
     job.attempt_count += 1
     job.last_error = None
 
@@ -289,9 +289,9 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
         if permanent_failed > 0:
             document.status = "failed"
             document.failure_reason = f"{permanent_failed} chunks reached max retries"
-            document.last_processed_at = datetime.utcnow()
+            document.last_processed_at = datetime.now(timezone.utc)
             job.status = "failed"
-            job.finished_at = datetime.utcnow()
+            job.finished_at = datetime.now(timezone.utc)
             job.last_error = document.failure_reason
             job.details_json = {
                 "phase": "failed",
@@ -303,7 +303,7 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
         if retryable_failed > 0 or pending > 0:
             document.status = "retrying"
             document.failure_reason = f"{retryable_failed + pending} chunks pending retry"
-            document.last_processed_at = datetime.utcnow()
+            document.last_processed_at = datetime.now(timezone.utc)
 
             if job.attempt_count >= job.max_attempts:
                 retry_rows = list(
@@ -322,9 +322,9 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
                 _refresh_document_progress(db, document)
                 document.status = "failed"
                 document.failure_reason = "Document ingestion job max attempts reached"
-                document.last_processed_at = datetime.utcnow()
+                document.last_processed_at = datetime.now(timezone.utc)
                 job.status = "failed"
-                job.finished_at = datetime.utcnow()
+                job.finished_at = datetime.now(timezone.utc)
                 job.last_error = document.failure_reason
                 job.details_json = {
                     "phase": "failed",
@@ -332,7 +332,7 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
                 }
             else:
                 job.status = "retrying"
-                job.finished_at = datetime.utcnow()
+                job.finished_at = datetime.now(timezone.utc)
                 job.last_error = document.failure_reason
                 job.details_json = {
                     "phase": "retrying",
@@ -352,11 +352,11 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
         document.index_status = "indexed"
         document.failure_reason = None
         document.progress_pct = 100.0
-        document.last_processed_at = datetime.utcnow()
-        document.last_indexed_at = datetime.utcnow()
+        document.last_processed_at = datetime.now(timezone.utc)
+        document.last_indexed_at = datetime.now(timezone.utc)
 
         job.status = "completed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.last_error = None
         job.details_json = {
             "phase": "completed",
@@ -370,10 +370,10 @@ def process_document_ingestion_job(db: Session, job: DocumentIngestionJob) -> Do
         document.status = "failed"
         document.index_status = "failed"
         document.failure_reason = str(exc)
-        document.last_processed_at = datetime.utcnow()
+        document.last_processed_at = datetime.now(timezone.utc)
 
         job.status = "failed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.last_error = str(exc)
         job.details_json = {
             "phase": "failed",
@@ -446,7 +446,7 @@ def rebuild_document_index(db: Session) -> DocumentIndexRun:
         documents = list(db.scalars(select(Document).where(Document.id.in_(processed_document_ids))))
         for document in documents:
             document.index_status = "indexed"
-            document.last_indexed_at = datetime.utcnow()
+            document.last_indexed_at = datetime.now(timezone.utc)
 
     run.status = "completed"
     run.num_chunks = len(payloads)

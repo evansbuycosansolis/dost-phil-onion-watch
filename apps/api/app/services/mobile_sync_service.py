@@ -256,7 +256,7 @@ def process_mobile_sync_batch(
     user_agent: str | None,
 ) -> MobileSyncResponse:
     source_name = _source_name(payload.provenance)
-    batch_submitted_at = _normalize_datetime(payload.provenance.submitted_at) or datetime.utcnow()
+    batch_submitted_at = _normalize_datetime(payload.provenance.submitted_at) or datetime.now(timezone.utc)
 
     results: list[MobileSubmissionResult] = []
     counters: dict[str, int] = {"accepted": 0, "updated": 0, "duplicate": 0, "conflict": 0, "rejected": 0}
@@ -392,7 +392,7 @@ def process_mobile_sync_batch(
 
     return MobileSyncResponse(
         sync_batch_id=payload.sync_batch_id,
-        processed_at=datetime.utcnow(),
+        processed_at=datetime.now(timezone.utc),
         summary=counters,
         results=results,
     )

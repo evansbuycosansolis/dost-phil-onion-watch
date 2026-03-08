@@ -43,6 +43,18 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) performs:
 - web lint + typecheck,
 - API dependency install + pytest.
 
+## Kubernetes release baseline
+
+- Primary manifests: `infra/deployment/k8s/`
+- Release pin for current cut:
+  - `ghcr.io/evansbuycosansolis/dost-phil-onion-watch-api:v0.1.0-rc1`
+  - `ghcr.io/evansbuycosansolis/dost-phil-onion-watch-web:v0.1.0-rc1`
+- Secret scaffold:
+  - `infra/deployment/k8s/secret.production.yaml`
+- Release validation records:
+  - `docs/ops/records/release/2026-03-08-rc1-validation-bundle.md`
+  - `docs/ops/records/release/2026-03-08-rc1-rollout-evidence.md`
+
 ## Environment variables
 
 Use `.env.example` templates in `apps/api` and `apps/web` as the baseline contract for deployment configuration.

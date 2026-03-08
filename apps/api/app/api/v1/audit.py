@@ -1,5 +1,5 @@
 from typing import Annotated
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -95,7 +95,7 @@ def export_audit_events(
         start_timestamp=start_timestamp,
         end_timestamp=end_timestamp,
     )
-    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     if format == "csv":
         content = export_events_as_csv(events)
         return Response(

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from time import perf_counter
 
 from sqlalchemy.orm import Session
@@ -38,7 +38,7 @@ def run_monthly_pipeline(
     job = JobRun(
         job_name="monthly_pipeline",
         status="running",
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         triggered_by=triggered_by,
         correlation_id=correlation_id,
     )
@@ -74,7 +74,7 @@ def run_monthly_pipeline(
             distribution_queued += queue_result["queued_count"]
 
         job.status = "completed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.details_json = {
             **details,
             "forecast_run_id": forecast_run.id,
@@ -94,7 +94,7 @@ def run_monthly_pipeline(
         )
     except Exception as exc:  # pragma: no cover
         job.status = "failed"
-        job.finished_at = datetime.utcnow()
+        job.finished_at = datetime.now(timezone.utc)
         job.message = str(exc)
         get_observability_store().record_job_event(
             job_name="monthly_pipeline",

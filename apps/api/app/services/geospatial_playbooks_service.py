@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -448,7 +448,7 @@ def recalculate_validation_run_summary(db: Session, run: GeospatialValidationRun
         run.status = "passed"
     else:
         run.status = "running"
-    run.finished_at = datetime.utcnow()
+    run.finished_at = datetime.now(timezone.utc)
     db.flush()
     return summary
 
@@ -829,7 +829,7 @@ def run_monthly_kpi_scorecard_generation(
     scorecard.computed_status = overall
     scorecard.source_pointers_json = {
         **(scorecard.source_pointers_json or {}),
-        "computed_at": datetime.utcnow().isoformat(),
+        "computed_at": datetime.now(timezone.utc).isoformat(),
         "metric_statuses": statuses,
         "traceability": traceability,
         "artifacts": artifacts,
@@ -841,7 +841,7 @@ def run_monthly_kpi_scorecard_generation(
         task_type="kpi_scorecard_review",
         title=f"Review geospatial KPI scorecard for {month.isoformat()}",
         description="Monthly KPI scorecard was generated and requires operations/governance review.",
-        due_at=datetime.utcnow() + timedelta(days=2),
+        due_at=datetime.now(timezone.utc) + timedelta(days=2),
         related_entity_type="geospatial_kpi_scorecard",
         related_entity_id=str(scorecard.id),
         payload={
@@ -884,7 +884,7 @@ def run_risk_review_reminders(db: Session, *, actor_user_id: int | None = None) 
                 task_type="risk_review_reminder",
                 title=f"Risk review due: {risk.risk_key}",
                 description=f"Risk item {risk.risk_key} requires review.",
-                due_at=datetime.utcnow() + timedelta(hours=12),
+                due_at=datetime.now(timezone.utc) + timedelta(hours=12),
                 assigned_to_user_id=risk.owner_user_id,
                 related_entity_type="geospatial_risk_item",
                 related_entity_id=str(risk.id),
@@ -897,7 +897,7 @@ def run_risk_review_reminders(db: Session, *, actor_user_id: int | None = None) 
 
 
 def run_incident_slo_checks(db: Session, *, actor_user_id: int | None = None) -> list[GeospatialOpsTask]:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     rows = list(
         db.scalars(
             select(GeospatialIncident).where(GeospatialIncident.status.in_(["open", "mitigating"]))

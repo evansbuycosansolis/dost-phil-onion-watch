@@ -247,7 +247,8 @@ Optional dashboard aggregations:
 ### Phase B
 
 - implement adapter interfaces
-- stub source adapters: Sentinel-2, Sentinel-1, Landsat, HLS
+- activate source adapters: Sentinel-2, Sentinel-1, Landsat, HLS
+- wire STAC-based discovery for each adapter with normalized scene persistence
 
 ### Phase C
 

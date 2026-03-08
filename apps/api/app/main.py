@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import date
 
 from fastapi import FastAPI
@@ -44,7 +45,47 @@ from app.services.seed_service import seed_documents, seed_operational_data, see
 
 logger = get_logger(__name__)
 
-app = FastAPI(title=settings.app_name, version="0.1.0", openapi_tags=OPENAPI_TAGS)
+
+def _bootstrap_data() -> None:
+    configure_logging()
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        has_users = db.scalar(select(User.id).limit(1))
+        if not has_users:
+            ref_result = seed_reference_data(db)
+            op_result = seed_operational_data(db)
+            doc_result = seed_documents(db)
+
+            reporting_month = date.today().replace(day=1)
+            run_forecasting(db, reporting_month)
+            run_anomaly_detection(db, reporting_month)
+            generate_alerts_from_signals(db, reporting_month)
+            rebuild_document_index(db)
+
+            db.commit()
+            logger.info(
+                "Initial seed complete",
+                extra={"reference": ref_result, "operational": op_result, "documents": doc_result},
+            )
+        else:
+            logger.info("Seed skipped: existing users found")
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Startup initialization failed: %s", exc)
+        raise
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    _bootstrap_data()
+    yield
+
+
+app = FastAPI(title=settings.app_name, version="0.1.0", openapi_tags=OPENAPI_TAGS, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -78,40 +119,6 @@ def health() -> dict:
 def metrics() -> PlainTextResponse:
     store = get_observability_store()
     return PlainTextResponse(store.metrics_text(), media_type="text/plain; version=0.0.4")
-
-
-@app.on_event("startup")
-def on_startup() -> None:
-    configure_logging()
-    Base.metadata.create_all(bind=engine)
-
-    db = SessionLocal()
-    try:
-        has_users = db.scalar(select(User.id).limit(1))
-        if not has_users:
-            ref_result = seed_reference_data(db)
-            op_result = seed_operational_data(db)
-            doc_result = seed_documents(db)
-
-            reporting_month = date.today().replace(day=1)
-            run_forecasting(db, reporting_month)
-            run_anomaly_detection(db, reporting_month)
-            generate_alerts_from_signals(db, reporting_month)
-            rebuild_document_index(db)
-
-            db.commit()
-            logger.info(
-                "Initial seed complete",
-                extra={"reference": ref_result, "operational": op_result, "documents": doc_result},
-            )
-        else:
-            logger.info("Seed skipped: existing users found")
-    except Exception as exc:
-        db.rollback()
-        logger.exception("Startup initialization failed: %s", exc)
-        raise
-    finally:
-        db.close()
 
 
 @app.get("/")

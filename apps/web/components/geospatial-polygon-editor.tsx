@@ -12,7 +12,7 @@ type Props = {
 };
 
 const GeospatialPolygonMap = dynamic(
-  () => import("./geospatial-polygon-map").then((mod) => mod.GeospatialPolygonMap),
+  () => import("./geospatial-polygon-map"),
   {
     ssr: false,
     loading: () => <div className="h-[320px] animate-pulse rounded-lg border border-slate-300 bg-slate-100" />,

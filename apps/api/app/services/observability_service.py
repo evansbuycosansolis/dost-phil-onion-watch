@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import threading
 from collections import defaultdict, deque
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.core.config import settings
@@ -11,7 +11,7 @@ from app.services.notification_service import notify_observability_alert
 
 
 def _now_utc() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc)
 
 
 def _percentile(values: list[float], percentile: float) -> float:

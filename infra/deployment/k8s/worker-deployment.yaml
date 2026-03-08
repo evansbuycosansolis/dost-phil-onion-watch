@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: phil-onion-watch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/evansbuycosansolis/dost-phil-onion-watch-api:v0.1.0-rc1
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.jobs.worker"]
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - secretRef:
+                name: api-secrets
+          volumeMounts:
+            - name: data-volume
+              mountPath: /workspace/data
+      volumes:
+        - name: data-volume
+          emptyDir: {}

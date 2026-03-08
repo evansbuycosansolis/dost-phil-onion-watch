@@ -18,6 +18,10 @@ apps/api/alembic/versions/__pycache__
 apps/api/storage/faiss/*.index
 apps/api/storage/reports/*
 apps/api/app/tests/tmp/*
+apps/api/e2e-web-*.db
+apps/api/e2e-web-*.index
+apps/api/e2e-web-*-meta.json
+apps/api/e2e-web-*-reports/
 data/fixtures/uploads/*
 apps/web/test-results/
 apps/web/playwright-report/

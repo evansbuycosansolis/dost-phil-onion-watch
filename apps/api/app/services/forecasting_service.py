@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from statistics import mean
 
 import numpy as np
@@ -362,7 +362,7 @@ def run_forecasting(db: Session, run_month: date) -> ForecastRun:
 
     forecast_run.status = "completed"
     forecast_run.metrics_json = {
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "num_municipalities": len(outputs),
         "avg_confidence": round(float(np.mean([o.confidence_score for o in outputs])) if outputs else 0.0, 4),
         "avg_selected_model_score": round(float(np.mean(selected_scores)) if selected_scores else 0.0, 6),

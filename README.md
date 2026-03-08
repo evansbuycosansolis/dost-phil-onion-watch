@@ -174,6 +174,13 @@ Execution docs for rollout, KPI, incidents, validation, and risk governance:
 - [Geospatial Risk Register](docs/governance/geospatial-risk-register.md)
 - [Geospatial Operator Guide](docs/ops/geospatial-operator-guide.md)
 
+## Release Hardening Artifacts
+
+- [Kubernetes Deployment Baseline](infra/deployment/README.md)
+- [Operations Deployment Guide](docs/ops/deployment.md)
+- [RC1 Validation Bundle](docs/ops/records/release/2026-03-08-rc1-validation-bundle.md)
+- [RC1 Rollout Evidence](docs/ops/records/release/2026-03-08-rc1-rollout-evidence.md)
+
 ## Mobile submission sync contract
 
 Municipal/mobile clients can sync batched submissions through:

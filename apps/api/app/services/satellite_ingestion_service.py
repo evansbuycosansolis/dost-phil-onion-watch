@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable
 
 from sqlalchemy import select
@@ -18,7 +18,7 @@ logger = get_logger(__name__)
 
 
 def _adapter_registry() -> list[SatelliteAdapter]:
-    # Phase B: stubs only; Phase C will add configuration for enabling/disabling sources.
+    # Source adapters are active by default; configurable source selection is handled by caller `sources`.
     return [
         Sentinel2Adapter(),
         Sentinel1Adapter(),
@@ -66,7 +66,7 @@ def discover_scenes(
 ) -> dict:
     """Discover scenes for AOIs and persist normalized scene metadata.
 
-    Phase B behavior: adapters return empty lists; this is scaffolding for Phase C.
+    Adapters query STAC collections and return normalized scene records.
     """
 
     registry = _adapter_registry()
@@ -146,7 +146,7 @@ def queue_ingestion_run(
         run_type="ingest",
         backend=backend,
         status=status,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         finished_at=None,
         triggered_by=triggered_by,
         correlation_id=correlation_id,
@@ -177,13 +177,13 @@ def execute_ingestion_run(
 
     if run.status == "cancelled":
         if run.finished_at is None:
-            run.finished_at = datetime.utcnow()
+            run.finished_at = datetime.now(timezone.utc)
             db.flush()
         return run
 
     if run.status == "cancel_requested":
         run.status = "cancelled"
-        run.finished_at = datetime.utcnow()
+        run.finished_at = datetime.now(timezone.utc)
         run.results_json = {
             **(run.results_json or {}),
             "cancelled": {"phase": "before_start"},
@@ -216,7 +216,7 @@ def execute_ingestion_run(
         )
         if totals.get("cancelled"):
             run.status = "cancelled"
-            run.finished_at = datetime.utcnow()
+            run.finished_at = datetime.now(timezone.utc)
             run.results_json = {
                 "scene_discovery": totals,
                 "cancelled": {"phase": "discovery"},
@@ -224,12 +224,12 @@ def execute_ingestion_run(
             logger.info("Geospatial scene discovery cancelled", extra={"run_id": run.id, **totals})
         else:
             run.status = "completed"
-            run.finished_at = datetime.utcnow()
+            run.finished_at = datetime.now(timezone.utc)
             run.results_json = {"scene_discovery": totals}
             logger.info("Geospatial scene discovery completed", extra={"run_id": run.id, **totals})
     except Exception as exc:  # pragma: no cover
         run.status = "failed"
-        run.finished_at = datetime.utcnow()
+        run.finished_at = datetime.now(timezone.utc)
         run.results_json = {"error": str(exc)}
         raise
     finally:

@@ -23,7 +23,7 @@ type LeafletMapInstance = {
 
 const defaultCenter: [number, number] = [16.0, 121.0];
 
-export function GeospatialPolygonMap({ title, vertices, onChange }: Props) {
+function GeospatialPolygonMap({ title, vertices, onChange }: Props) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
   const instanceRef = useRef<LeafletMapInstance | null>(null);
@@ -122,6 +122,9 @@ export function GeospatialPolygonMap({ title, vertices, onChange }: Props) {
     </div>
   );
 }
+
+export { GeospatialPolygonMap };
+export default GeospatialPolygonMap;
 
 function renderGeometry(
   L: LeafletModule,

@@ -4,7 +4,7 @@ import csv
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -315,7 +315,7 @@ def run_connector_ingestion(
     if adapter is None:
         raise ConnectorNotFoundError(f"Unknown connector: {connector_key}")
 
-    sync_batch_id = f"feed-{connector_key}-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+    sync_batch_id = f"feed-{connector_key}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
     rows = adapter.pull(limit=max(1, min(limit, 2000)))
     summary = {
         "connector_key": connector_key,
@@ -379,7 +379,7 @@ def run_connector_ingestion(
                 idempotency_key=external_id,
                 payload_hash=payload_hash,
                 submitted_by=actor_user_id,
-                submitted_at=datetime.utcnow(),
+                submitted_at=datetime.now(timezone.utc),
                 status="rejected",
                 conflict_reason=str(exc),
                 payload=row,
@@ -447,7 +447,7 @@ def run_connector_ingestion(
             idempotency_key=external_id,
             payload_hash=payload_hash,
             submitted_by=actor_user_id,
-            submitted_at=datetime.utcnow(),
+            submitted_at=datetime.now(timezone.utc),
             status="pending_approval",
             payload=normalized.raw_payload,
             provenance_json={
@@ -470,7 +470,7 @@ def run_connector_ingestion(
             requested_by=actor_user_id,
             status="pending",
             notes=f"Connector ingestion pending review ({connector_key})",
-            requested_at=datetime.utcnow(),
+            requested_at=datetime.now(timezone.utc),
             created_by=actor_user_id,
             updated_by=actor_user_id,
         )
@@ -795,7 +795,7 @@ def review_connector_workflow(
         raise ConnectorValidationError("Source submission not found")
 
     action_normalized = action.strip().lower()
-    reviewed_at = datetime.utcnow()
+    reviewed_at = datetime.now(timezone.utc)
 
     if action_normalized == "reject":
         workflow.status = "rejected"

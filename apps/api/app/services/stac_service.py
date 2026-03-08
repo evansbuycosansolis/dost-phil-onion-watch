@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 
 import httpx
@@ -90,7 +90,7 @@ def stac_search_items(
     end: datetime | None,
     limit: int,
 ) -> list[dict[str, Any]]:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     effective_end = end or now
     effective_start = start or (effective_end - timedelta(days=settings.geospatial_default_lookback_days))
 

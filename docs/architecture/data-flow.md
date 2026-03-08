@@ -49,12 +49,15 @@
    - Final delivery failures emit notifications and remain queryable as auditable logs.
 
 10. **Pipeline orchestration**
-   - `monthly_pipeline` job coordinates validation, recomputation, forecasting, anomalies, alerts, index refresh, and report generation.
-   - `report_distribution` scheduled job queues undistributed reports and processes pending delivery logs.
-   - Job status and run details are visible in Admin views.
+`monthly_pipeline` coordinates validation, recomputation, forecasting,
+anomalies, alerts, index refresh, and report generation. The
+`report_distribution` scheduled job queues undistributed reports and
+processes pending delivery logs. Job status and run details are visible in
+Admin views.
 
 11. **Observability and alerting**
-   - Request middleware captures endpoint latency, status code, and correlation IDs.
-   - Worker captures per-job success/failure counters and durations.
-   - Correlation IDs connect API-triggered jobs for traceability.
-   - Runtime monitor evaluates degraded endpoints / failing jobs and emits notifications.
+Request middleware captures endpoint latency, status code, and correlation
+IDs. Worker telemetry captures per-job success/failure counters and
+durations. Correlation IDs connect API-triggered jobs for traceability.
+Runtime monitoring evaluates degraded endpoints and failing jobs, then emits
+notifications.

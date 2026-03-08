@@ -909,7 +909,7 @@ export default function GeospatialRunDrilldownPage() {
     cloud_score: null,
     spatial_resolution_m: null,
     processing_status: "not_available",
-    provenance_status: "placeholder",
+    provenance_status: "unavailable",
   };
   const fallbackFeaturePreview: FeatureProvenanceItem = {
     id: 0,

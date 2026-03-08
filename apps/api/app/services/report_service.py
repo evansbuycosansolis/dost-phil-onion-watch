@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -147,7 +147,7 @@ def generate_report(db: Session, category: str, reporting_month: date, generated
         status="generated",
         generated_by=generated_by,
         metadata_json={
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "forecast_model_diagnostics": diagnostics_summary,
         },
     )

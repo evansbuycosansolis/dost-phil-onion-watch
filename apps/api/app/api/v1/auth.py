@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -130,7 +130,7 @@ def oidc_login(payload: OIDCLoginRequest, request: Request, db: Annotated[Sessio
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="MFA is required for privileged OIDC roles")
 
     if mfa_verified:
-        user.last_mfa_verified_at = datetime.utcnow()
+        user.last_mfa_verified_at = datetime.now(timezone.utc)
 
     token = issue_token_for_user_with_context(
         db,
@@ -165,4 +165,4 @@ def oidc_login(payload: OIDCLoginRequest, request: Request, db: Annotated[Sessio
 
 @router.get("/me", response_model=AuthSession)
 def me(current_user=Depends(get_current_user)) -> AuthSession:
-    return AuthSession(user=current_user, issued_at=datetime.utcnow())
+    return AuthSession(user=current_user, issued_at=datetime.now(timezone.utc))

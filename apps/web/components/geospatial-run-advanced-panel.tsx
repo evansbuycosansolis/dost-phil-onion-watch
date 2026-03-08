@@ -199,7 +199,7 @@ type RunCommandCenter = {
   run_archive_restore_action?: Record<string, unknown>;
   run_immutable_evidence_record?: Record<string, unknown>;
   run_digital_signature_verification?: Record<string, unknown>;
-  run_provenance_notarization_stub?: Record<string, unknown>;
+  run_provenance_notarization?: Record<string, unknown>;
   run_decision_log?: Array<Record<string, unknown>>;
   run_governance_attestation?: Record<string, unknown>;
   run_reviewer_assignment?: Record<string, unknown>;
@@ -650,7 +650,7 @@ export function GeospatialRunAdvancedPanel({ token, runId }: { token?: string | 
                     Publish state: {String((commandCenter.data.run_publish_unpublish_workflow as { is_published?: boolean } | undefined)?.is_published ?? false)} · Archive tier: {String((commandCenter.data.run_cold_storage_archive_action as { archive_tier?: string } | undefined)?.archive_tier ?? "hot")}
                   </div>
                   <div className="rounded border border-slate-200 bg-white px-2 py-1">
-                    Signature verified: {String((commandCenter.data.run_digital_signature_verification as { verified?: boolean } | undefined)?.verified ?? false)} · Notary: {String((commandCenter.data.run_provenance_notarization_stub as { status?: string } | undefined)?.status ?? "n/a")}
+                    Signature verified: {String((commandCenter.data.run_digital_signature_verification as { verified?: boolean } | undefined)?.verified ?? false)} · Notary: {String((commandCenter.data.run_provenance_notarization as { status?: string } | undefined)?.status ?? "n/a")}
                   </div>
                   <div className="rounded border border-slate-200 bg-white px-2 py-1">
                     Decision log entries: {((commandCenter.data.run_decision_log as unknown[]) ?? []).length} · Review comments: {((commandCenter.data.run_review_comment_threads as unknown[]) ?? []).length}

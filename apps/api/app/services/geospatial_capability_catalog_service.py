@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -115,7 +115,7 @@ def _default_value(*, key: str, label: str, context: dict[str, Any]) -> Any:
         return {
             "enabled": True,
             "status": "active",
-            "last_updated_at": datetime.utcnow().isoformat(),
+            "last_updated_at": datetime.now(timezone.utc).isoformat(),
             "context": context,
         }
     if any(token in lower for token in ("timeline", "history", "queue", "board", "panel", "matrix", "chart", "table", "digest", "gallery", "manifest", "log", "tracker", "overlay", "map", "dashboard", "center", "workspace", "console", "viewer", "summary", "bundle", "pack", "workbook")):
@@ -129,7 +129,7 @@ def _default_value(*, key: str, label: str, context: dict[str, Any]) -> Any:
         ]
     if any(token in lower for token in ("date", "calendar", "window")):
         return {
-            "next_date": (datetime.utcnow().date() + timedelta(days=max(1, int(score * 30)))).isoformat(),
+            "next_date": (datetime.now(timezone.utc).date() + timedelta(days=max(1, int(score * 30)))).isoformat(),
             "status": "scheduled",
         }
     return {"status": "available", "label": label, "value": score, "context": context}

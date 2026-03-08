@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -245,7 +245,7 @@ def queue_report_distribution(
 
     queued = 0
     skipped = 0
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     for group in groups:
         recipients = _resolve_group_recipients(db, group)
@@ -388,7 +388,7 @@ def _deliver_webhook(*, report: ReportRecord, delivery: ReportDeliveryLog, expor
         },
         "delivery_log_id": delivery.id,
         "attempt": delivery.attempt_count,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     response = httpx.post(webhook_url, json=payload, timeout=10.0)
@@ -416,7 +416,7 @@ def process_pending_report_deliveries(
     limit: int | None = None,
     actor_user_id: int | None = None,
 ) -> list[ReportDeliveryLog]:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     batch_limit = max(1, min(int(limit or settings.report_distribution_batch_size), 500))
 
     deliveries = list(
@@ -455,7 +455,7 @@ def process_pending_report_deliveries(
             payload = _dispatch_delivery(report=report, delivery=delivery, export_path=export_path, media_type=media_type)
 
             delivery.status = "sent"
-            delivery.delivered_at = datetime.utcnow()
+            delivery.delivered_at = datetime.now(timezone.utc)
             delivery.payload_json = payload
             delivery.last_error = None
             delivery.updated_by = actor_user_id
@@ -489,7 +489,7 @@ def process_pending_report_deliveries(
                             "recipient_group_id": delivery.recipient_group_id,
                         },
                     )
-                    delivery.notification_sent_at = datetime.utcnow()
+                    delivery.notification_sent_at = datetime.now(timezone.utc)
 
                 emit_audit_event(
                     db,
@@ -503,7 +503,7 @@ def process_pending_report_deliveries(
             else:
                 backoff = max(5, group.retry_backoff_seconds) * (2 ** max(0, delivery.attempt_count - 1))
                 delivery.status = "retrying"
-                delivery.next_attempt_at = datetime.utcnow() + timedelta(seconds=backoff)
+                delivery.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff)
                 emit_audit_event(
                     db,
                     actor_user_id=actor_user_id,

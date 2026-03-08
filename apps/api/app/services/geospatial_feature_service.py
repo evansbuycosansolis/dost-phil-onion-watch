@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.models import GeospatialAOI, GeospatialFeature, SatellitePipelineRun, SatelliteScene
+from app.services.crop_surveillance_fusion_service import run_fusion_refresh
 
 logger = get_logger(__name__)
 
@@ -35,7 +36,7 @@ def queue_feature_refresh_run(
         run_type="feature_refresh",
         backend=backend,
         status=status,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         finished_at=None,
         triggered_by=triggered_by,
         correlation_id=correlation_id,
@@ -63,13 +64,13 @@ def execute_feature_refresh_run(
 
     if run.status == "cancelled":
         if run.finished_at is None:
-            run.finished_at = datetime.utcnow()
+            run.finished_at = datetime.now(timezone.utc)
             db.flush()
         return run
 
     if run.status == "cancel_requested":
         run.status = "cancelled"
-        run.finished_at = datetime.utcnow()
+        run.finished_at = datetime.now(timezone.utc)
         run.results_json = {
             **(run.results_json or {}),
             "cancelled": {"phase": "before_start"},
@@ -77,7 +78,7 @@ def execute_feature_refresh_run(
         db.flush()
         return run
 
-    started_at = datetime.utcnow()
+    started_at = datetime.now(timezone.utc)
     run.status = "running"
     run.finished_at = None
     run.parameters_json = {"lookback_days": settings.geospatial_default_lookback_days}
@@ -172,17 +173,18 @@ def execute_feature_refresh_run(
 
         if cancelled:
             run.status = "cancelled"
-            run.finished_at = datetime.utcnow()
+            run.finished_at = datetime.now(timezone.utc)
             run.results_json = {"materialized": totals, "cancelled": {"phase": "materialization"}}
             logger.info("Geospatial feature refresh cancelled", extra={"run_id": run.id, **totals})
         else:
+            fusion = run_fusion_refresh(db, correlation_id=run.correlation_id, since_date=lookback_start.date())
             run.status = "completed"
-            run.finished_at = datetime.utcnow()
-            run.results_json = {"materialized": totals}
-            logger.info("Geospatial feature refresh completed", extra={"run_id": run.id, **totals})
+            run.finished_at = datetime.now(timezone.utc)
+            run.results_json = {"materialized": totals, "fusion": fusion}
+            logger.info("Geospatial feature refresh completed", extra={"run_id": run.id, **totals, "fusion": fusion})
     except Exception as exc:  # pragma: no cover
         run.status = "failed"
-        run.finished_at = datetime.utcnow()
+        run.finished_at = datetime.now(timezone.utc)
         run.results_json = {"error": str(exc)}
         raise
     finally:

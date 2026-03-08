@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from jose import jwt
@@ -90,8 +90,8 @@ def _build_oidc_id_token(
     payload = {
         "iss": issuer,
         "aud": audience,
-        "exp": int((datetime.utcnow() + timedelta(minutes=10)).timestamp()),
-        "iat": int(datetime.utcnow().timestamp()),
+        "exp": int((datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp()),
+        "iat": int(datetime.now(timezone.utc).timestamp()),
         "sub": subject,
         "email": email,
         "name": name,
@@ -234,6 +234,12 @@ def test_geospatial_endpoints_smoke(client, auth_headers):
     assert layers.status_code == 200
     payload = layers.json()
     assert "layers" in payload
+    assert payload["layers"]
+    first_layer = payload["layers"][0]
+    assert "tile_url_template" in first_layer
+    tile = client.get("/api/v1/geospatial/map/tiles/crop_activity_score/8/210/101.png", headers=auth_headers)
+    assert tile.status_code == 200
+    assert tile.headers["content-type"].startswith("image/png")
 
     ingest = client.post(
         "/api/v1/geospatial/ingest/run",
@@ -766,6 +772,8 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "run_chain_of_custody_timeline" in run_ops_payload
     assert "run_publish_unpublish_workflow" in run_ops_payload
     assert "run_artifact_retention_policy" in run_ops_payload
+    assert "run_provenance_notarization" in run_ops_payload
+    assert run_ops_payload["run_provenance_notarization"]["status"] == "recorded"
     assert "run_decision_log" in run_ops_payload
     assert "run_scenario_replay" in run_ops_payload
     assert run_ops_payload["run_catalog_coverage"]["fully_covered"] is True
@@ -1188,7 +1196,7 @@ def test_document_ingestion_chunk_retry_safety(client, auth_headers, monkeypatch
 def test_mobile_sync_contract_idempotency_conflicts_and_audit(client, municipal_headers, auth_headers):
     reporting_month = date.today().replace(day=1)
     harvest_date = reporting_month + timedelta(days=5)
-    batch_id = f"mobile-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-sj-001"
+    batch_id = f"mobile-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-sj-001"
 
     payload = {
         "contract_version": "1.0",
@@ -1198,7 +1206,7 @@ def test_mobile_sync_contract_idempotency_conflicts_and_audit(client, municipal_
             "client_id": "municipal-field-app",
             "device_id": "android-sj-001",
             "app_version": "1.2.0",
-            "submitted_at": datetime.utcnow().isoformat() + "Z",
+                "submitted_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         },
         "submissions": [
             {
@@ -1301,7 +1309,7 @@ def test_mobile_sync_scope_guard_and_submission_visibility(client, municipal_hea
     reporting_month = date.today().replace(day=1)
     scoped_violation_payload = {
         "contract_version": "1.0",
-        "sync_batch_id": f"mobile-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-scope-deny",
+        "sync_batch_id": f"mobile-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-scope-deny",
         "provenance": {
             "source_channel": "mobile_app",
             "client_id": "municipal-field-app",
@@ -1310,7 +1318,7 @@ def test_mobile_sync_scope_guard_and_submission_visibility(client, municipal_hea
         },
         "submissions": [
             {
-                "idempotency_key": f"scope-deny-{datetime.utcnow().strftime('%H%M%S%f')}",
+                "idempotency_key": f"scope-deny-{datetime.now(timezone.utc).strftime('%H%M%S%f')}",
                 "submission_type": "farmgate_price_report",
                 "payload": {
                     "municipality_id": 2,
@@ -1327,7 +1335,7 @@ def test_mobile_sync_scope_guard_and_submission_visibility(client, municipal_hea
     assert denied_result["status"] == "rejected"
     assert "scope violation" in (denied_result["conflict_reason"] or "")
 
-    admin_batch_id = f"mobile-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-admin-001"
+    admin_batch_id = f"mobile-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-admin-001"
     admin_payload = {
         "contract_version": "1.0",
         "sync_batch_id": admin_batch_id,
@@ -1339,7 +1347,7 @@ def test_mobile_sync_scope_guard_and_submission_visibility(client, municipal_hea
         },
         "submissions": [
             {
-                "idempotency_key": f"admin-sync-{datetime.utcnow().strftime('%H%M%S%f')}",
+                "idempotency_key": f"admin-sync-{datetime.now(timezone.utc).strftime('%H%M%S%f')}",
                 "submission_type": "farmgate_price_report",
                 "payload": {
                     "municipality_id": 2,
@@ -1485,7 +1493,7 @@ def test_audit_log_created_on_mutation(client, auth_headers):
 
 
 def test_audit_diff_filters_and_export(client, auth_headers, municipal_headers):
-    code = f"OM-A{datetime.utcnow().strftime('%H%M%S')}"
+    code = f"OM-A{datetime.now(timezone.utc).strftime('%H%M%S')}"
     create_response = client.post(
         "/api/v1/municipalities/",
         headers=auth_headers,
@@ -1644,7 +1652,7 @@ def test_report_distribution_retry_and_failure_notification(client, auth_headers
     with SessionLocal() as db:
         row = db.scalar(select(ReportDeliveryLog).where(ReportDeliveryLog.id == webhook_row["id"]))
         assert row is not None
-        row.next_attempt_at = datetime.utcnow() - timedelta(minutes=1)
+        row.next_attempt_at = datetime.now(timezone.utc) - timedelta(minutes=1)
         db.commit()
 
     second_process = client.post("/api/v1/reports/distribution/process?limit=200", headers=auth_headers)
@@ -1799,7 +1807,7 @@ def test_geospatial_playbooks_incident_validation_and_risk_lifecycle(client, aut
         "/api/v1/geospatial/risks",
         headers=auth_headers,
         json={
-            "risk_key": f"RISK-{datetime.utcnow().strftime('%H%M%S')}",
+            "risk_key": f"RISK-{datetime.now(timezone.utc).strftime('%H%M%S')}",
             "title": "Integration risk item",
             "description": "Risk lifecycle integration test",
             "likelihood": 3,

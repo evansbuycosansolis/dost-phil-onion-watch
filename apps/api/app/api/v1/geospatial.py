@@ -4,7 +4,8 @@ import csv
 import hashlib
 import io
 import json
-from datetime import date, datetime, timedelta
+import base64
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Response
@@ -84,6 +85,7 @@ from app.schemas.geospatial import (
 from app.services.audit_service import build_structured_diff, emit_audit_event
 from app.services.geospatial_capability_catalog_service import inject_catalog_capabilities
 from app.services.geospatial_feature_service import execute_feature_refresh_run, queue_feature_refresh_run
+from app.services.map_tile_service import generate_map_tiles
 from app.services.satellite_ingestion_service import execute_ingestion_run, queue_ingestion_run
 from app.services.stac_service import geojson_to_bbox
 
@@ -100,6 +102,15 @@ READ_ROLES = (
     "auditor",
 )
 ADMIN_ROLES = ("super_admin", "provincial_admin")
+
+_ONE_PIXEL_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8Xw8AAoMBgWQnQ2kAAAAASUVORK5CYII="
+)
+
+
+def _utcnow() -> datetime:
+    # Keep historical naive-UTC semantics while avoiding deprecated utcnow usage.
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _aoi_to_dto(row: GeospatialAOI) -> AOIDTO:
@@ -163,7 +174,7 @@ def _normalize_string_list(values: list[str] | None) -> list[str]:
 def _get_or_create_aoi_metadata(db: Session, *, aoi_id: int) -> GeospatialAOIMetadata:
     meta = db.scalar(select(GeospatialAOIMetadata).where(GeospatialAOIMetadata.aoi_id == aoi_id))
     if meta is None:
-        token_input = f"{aoi_id}-{datetime.utcnow().isoformat()}"
+        token_input = f"{aoi_id}-{_utcnow().isoformat()}"
         token = hashlib.sha256(token_input.encode("utf-8")).hexdigest()[:32]
         meta = GeospatialAOIMetadata(
             aoi_id=aoi_id,
@@ -231,7 +242,7 @@ def _append_run_event(
         status=status,
         message=message,
         details_json=details or {},
-        logged_at=datetime.utcnow(),
+        logged_at=_utcnow(),
         created_by=actor_user_id,
         updated_by=actor_user_id,
     )
@@ -884,7 +895,7 @@ def create_aoi(
             boundary_wkt=aoi.boundary_wkt,
             changed_by=current_user.id,
             change_reason=payload.change_reason,
-            changed_at=datetime.utcnow(),
+            changed_at=_utcnow(),
         )
     )
     emit_audit_event(
@@ -957,7 +968,7 @@ def update_aoi(
             boundary_wkt=aoi.boundary_wkt,
             changed_by=current_user.id,
             change_reason=change_reason,
-            changed_at=datetime.utcnow(),
+            changed_at=_utcnow(),
         )
     )
     emit_audit_event(
@@ -996,7 +1007,7 @@ def deactivate_aoi(
             boundary_wkt=aoi.boundary_wkt,
             changed_by=current_user.id,
             change_reason=change_reason,
-            changed_at=datetime.utcnow(),
+            changed_at=_utcnow(),
         )
     )
     emit_audit_event(
@@ -1391,7 +1402,7 @@ def cancel_pipeline_run(
     if run.status == "cancel_requested":
         return {"run_id": run.id, "status": run.status}
 
-    now = datetime.utcnow()
+    now = _utcnow()
     if run.status == "queued":
         run.status = "cancelled"
         run.finished_at = now
@@ -1702,50 +1713,97 @@ def map_layers(
         ),
     ],
 ):
-    return {
-        "layers": [
-            {
-                "key": "crop_activity_score",
-                "label": "Crop activity",
-                "description": "Fused AOI-level crop activity signal.",
-                "status": "ready",
-                "legend": ["0.0 low", "0.5 moderate", "1.0 high"],
-            },
-            {
-                "key": "vegetation_vigor_score",
-                "label": "Vegetation vigor",
-                "description": "Optical vegetation vigor proxy (NDVI/EVI-derived).",
-                "status": "ready",
-                "legend": ["0.0 low", "0.5 moderate", "1.0 high"],
-            },
-            {
-                "key": "radar_change_score",
-                "label": "Radar change",
-                "description": "SAR structural/change signal for cloudy-period continuity.",
-                "status": "ready",
-                "legend": ["-1.0 drop", "0.0 stable", "1.0 surge"],
-            },
-            {
-                "key": "cloud_confidence_score",
-                "label": "Cloud confidence",
-                "description": "Optical usability / cloud penalty signal.",
-                "status": "degraded",
-                "legend": ["0.0 poor", "0.5 moderate", "1.0 high"],
-            },
-            {
-                "key": "observation_confidence_score",
-                "label": "Observation confidence",
-                "description": "Overall confidence given coverage, cloud, and temporal gaps.",
-                "status": "ready",
-                "legend": ["0.0 poor", "0.5 moderate", "1.0 high"],
-            },
-        ],
-        "layer_status": {
-            "ready": 4,
-            "degraded": 1,
-            "failed": 0,
+    base_layers = [
+        {
+            "key": "crop_activity_score",
+            "label": "Crop activity",
+            "description": "Fused AOI-level crop activity signal.",
+            "status": "ready",
+            "legend": ["0.0 low", "0.5 moderate", "1.0 high"],
         },
-    }
+        {
+            "key": "vegetation_vigor_score",
+            "label": "Vegetation vigor",
+            "description": "Optical vegetation vigor proxy (NDVI/EVI-derived).",
+            "status": "ready",
+            "legend": ["0.0 low", "0.5 moderate", "1.0 high"],
+        },
+        {
+            "key": "radar_change_score",
+            "label": "Radar change",
+            "description": "SAR structural/change signal for cloudy-period continuity.",
+            "status": "ready",
+            "legend": ["-1.0 drop", "0.0 stable", "1.0 surge"],
+        },
+        {
+            "key": "cloud_confidence_score",
+            "label": "Cloud confidence",
+            "description": "Optical usability / cloud penalty signal.",
+            "status": "degraded",
+            "legend": ["0.0 poor", "0.5 moderate", "1.0 high"],
+        },
+        {
+            "key": "observation_confidence_score",
+            "label": "Observation confidence",
+            "description": "Overall confidence given coverage, cloud, and temporal gaps.",
+            "status": "ready",
+            "legend": ["0.0 poor", "0.5 moderate", "1.0 high"],
+        },
+    ]
+    layers = []
+    layer_status = {"ready": 0, "degraded": 0, "failed": 0}
+    for layer in base_layers:
+        tile_meta = generate_map_tiles(layer_key=layer["key"])
+        merged = {
+            **layer,
+            "tile_meta": tile_meta,
+        }
+        if tile_meta.get("status") == "ready":
+            merged["tile_url_template"] = tile_meta.get("tile_url_template")
+        layers.append(merged)
+
+        status_key = str(layer.get("status") or "failed")
+        if status_key not in layer_status:
+            layer_status[status_key] = 0
+        layer_status[status_key] += 1
+
+    return {"layers": layers, "layer_status": layer_status}
+
+
+@router.get("/map/tiles/{layer_key}/{z}/{x}/{y}.png")
+def get_map_tile(
+    layer_key: str,
+    z: int,
+    x: int,
+    y: int,
+    _: Annotated[
+        CurrentUser,
+        Depends(
+            require_role(
+                "super_admin",
+                "provincial_admin",
+                "municipal_encoder",
+                "warehouse_operator",
+                "market_analyst",
+                "policy_reviewer",
+                "executive_viewer",
+                "auditor",
+            )
+        ),
+    ],
+):
+    tile_meta = generate_map_tiles(layer_key=layer_key)
+    if tile_meta.get("status") != "ready":
+        raise HTTPException(status_code=404, detail="Unknown map layer key")
+    _ = (z, x, y)
+    return Response(
+        content=_ONE_PIXEL_PNG,
+        media_type="image/png",
+        headers={
+            "Cache-Control": str(tile_meta.get("cache_control") or "public, max-age=300"),
+            "X-POW-Layer-Key": str(tile_meta.get("layer_key") or layer_key),
+        },
+    )
 
 
 @router.post("/map/layers/{layer_key}/retry")
@@ -1756,7 +1814,7 @@ def retry_map_layer(
     return {
         "layer_key": layer_key,
         "status": "ready",
-        "retried_at": datetime.utcnow().isoformat(),
+        "retried_at": _utcnow().isoformat(),
         "message": "Layer reload queued",
     }
 
@@ -1890,14 +1948,14 @@ def favorite_aoi(
             aoi_id=aoi_id,
             user_id=current_user.id,
             is_pinned=payload.is_pinned,
-            pinned_at=datetime.utcnow(),
+            pinned_at=_utcnow(),
             created_by=current_user.id,
             updated_by=current_user.id,
         )
         db.add(favorite)
     else:
         favorite.is_pinned = payload.is_pinned
-        favorite.pinned_at = datetime.utcnow()
+        favorite.pinned_at = _utcnow()
         favorite.updated_by = current_user.id
     emit_audit_event(
         db,
@@ -1988,7 +2046,7 @@ def bulk_update_aoi_status(
                 boundary_wkt=row.boundary_wkt,
                 changed_by=current_user.id,
                 change_reason=payload.change_reason,
-                changed_at=datetime.utcnow(),
+                changed_at=_utcnow(),
             )
         )
         emit_audit_event(
@@ -2071,7 +2129,7 @@ def bulk_import_aoi_geojson(
                 boundary_wkt=aoi.boundary_wkt,
                 changed_by=current_user.id,
                 change_reason="Bulk GeoJSON import",
-                changed_at=datetime.utcnow(),
+                changed_at=_utcnow(),
             )
         )
         created.append({"id": aoi.id, "code": aoi.code, "name": aoi.name})
@@ -2234,7 +2292,7 @@ def restore_aoi_version(
             boundary_wkt=aoi.boundary_wkt,
             changed_by=current_user.id,
             change_reason=f"Restored from version {version}",
-            changed_at=datetime.utcnow(),
+            changed_at=_utcnow(),
         )
     )
     emit_audit_event(
@@ -2782,7 +2840,7 @@ def clone_pipeline_run(
 
 def _run_diagnostics_payload(db: Session, run: SatellitePipelineRun) -> dict[str, Any]:
     started_at = run.started_at or run.created_at
-    finished_at = run.finished_at or datetime.utcnow()
+    finished_at = run.finished_at or _utcnow()
     elapsed_seconds = max(0.0, (finished_at - started_at).total_seconds()) if started_at else 0.0
     scene_rows = _list_run_scene_rows(db, run=run)
     feature_rows = _list_run_feature_rows(db, run=run)
@@ -2799,7 +2857,7 @@ def _run_diagnostics_payload(db: Session, run: SatellitePipelineRun) -> dict[str
     if isinstance(latest_acquired, str):
         latest_dt = _parse_iso_datetime(latest_acquired)
         if latest_dt is not None:
-            stale_data_warning = (datetime.utcnow() - latest_dt).days >= 14
+            stale_data_warning = (_utcnow() - latest_dt).days >= 14
     throughput = round(_safe_ratio(feature_count + scene_count, max(1.0, elapsed_seconds / 60.0)), 4)
     run_rows = db.scalars(
         select(SatellitePipelineRun)
@@ -2809,7 +2867,7 @@ def _run_diagnostics_payload(db: Session, run: SatellitePipelineRun) -> dict[str
     ).all()
     durations = sorted(
         [
-            max(0.0, ((row.finished_at or datetime.utcnow()) - (row.started_at or row.created_at)).total_seconds())
+            max(0.0, ((row.finished_at or _utcnow()) - (row.started_at or row.created_at)).total_seconds())
             for row in run_rows
             if row.started_at is not None
         ]
@@ -3441,7 +3499,7 @@ def _run_artifact_payload(db: Session, *, run: SatellitePipelineRun, artifact_ke
 
     if artifact_key == "signed-package":
         manifest = _run_artifact_manifest_payload(db, run=run)
-        signed_blob = {"run_id": run.id, "manifest": manifest, "signed_at": datetime.utcnow().isoformat()}
+        signed_blob = {"run_id": run.id, "manifest": manifest, "signed_at": _utcnow().isoformat()}
         signature = hashlib.sha256(f'{settings.secret_key}:{json.dumps(signed_blob, sort_keys=True, default=str)}'.encode("utf-8")).hexdigest()
         signed_blob["signature"] = signature
         payload = json.dumps(signed_blob, indent=2, default=str).encode("utf-8")
@@ -3455,7 +3513,7 @@ def _run_artifact_payload(db: Session, *, run: SatellitePipelineRun, artifact_ke
         approval_gate = _run_approval_gate_payload(db, run=run)
         bundle = {
             "run_id": run.id,
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": _utcnow().isoformat(),
             "detail": detail,
             "diagnostics": diagnostics,
             "reproducibility": compare_ref,
@@ -3480,7 +3538,7 @@ def _run_artifact_payload(db: Session, *, run: SatellitePipelineRun, artifact_ke
 
 
 def _run_artifact_manifest_payload(db: Session, *, run: SatellitePipelineRun) -> dict[str, Any]:
-    generated_at = datetime.utcnow()
+    generated_at = _utcnow()
     artifact_specs = [
         ("run-summary.json", "Run summary snapshot"),
         ("diagnostics.json", "Run diagnostics payload"),
@@ -3717,7 +3775,7 @@ def create_run_schedule(
         retry_strategy=payload.retry_strategy.strip() or "standard",
         queue_priority=payload.queue_priority,
         is_active=payload.is_active,
-        next_run_at=datetime.utcnow(),
+        next_run_at=_utcnow(),
         last_run_at=None,
         last_run_status=None,
         sources_json={"sources": _normalize_string_list(payload.sources)},
@@ -3889,7 +3947,7 @@ def geospatial_executive_dashboard(
     db: Annotated[Session, Depends(get_db)],
     _: Annotated[CurrentUser, Depends(require_role(*READ_ROLES))],
 ):
-    now = datetime.utcnow()
+    now = _utcnow()
     cutoff_30d = now - timedelta(days=30)
     cutoff_90d = now - timedelta(days=90)
     stale_cutoff_date = (now - timedelta(days=21)).date()
@@ -4250,7 +4308,7 @@ def _feature_anomaly_score(feature: GeospatialFeature) -> float:
 
 
 def _feature_rows_for_aoi(db: Session, *, aoi_id: int, months: int = 12) -> list[GeospatialFeature]:
-    cutoff = (datetime.utcnow() - timedelta(days=max(30, months * 30))).date()
+    cutoff = (_utcnow() - timedelta(days=max(30, months * 30))).date()
     return db.scalars(
         select(GeospatialFeature)
         .where(GeospatialFeature.aoi_id == aoi_id, GeospatialFeature.observation_date >= cutoff)
@@ -4259,7 +4317,7 @@ def _feature_rows_for_aoi(db: Session, *, aoi_id: int, months: int = 12) -> list
 
 
 def _scene_rows_for_aoi(db: Session, *, aoi_id: int, months: int = 12) -> list[SatelliteScene]:
-    cutoff = datetime.utcnow() - timedelta(days=max(30, months * 30))
+    cutoff = _utcnow() - timedelta(days=max(30, months * 30))
     return db.scalars(
         select(SatelliteScene)
         .where(SatelliteScene.aoi_id == aoi_id, SatelliteScene.acquired_at >= cutoff)
@@ -4302,7 +4360,7 @@ def _month_series(values: dict[str, list[float]], month_keys: list[str]) -> list
 
 
 def _aoi_surveillance_payload(db: Session, *, aoi: GeospatialAOI) -> dict[str, Any]:
-    now = datetime.utcnow()
+    now = _utcnow()
     feature_rows = _feature_rows_for_aoi(db, aoi_id=aoi.id, months=12)
     scene_rows = _scene_rows_for_aoi(db, aoi_id=aoi.id, months=12)
     latest_feature = feature_rows[-1] if feature_rows else None
@@ -4747,7 +4805,7 @@ def _default_stakeholder_contacts(db: Session, *, municipality_id: int | None) -
 
 def _aoi_operations_payload(db: Session, *, aoi: GeospatialAOI, actor_user_id: int | None = None) -> dict[str, Any]:
     meta, advanced = _load_aoi_operations_state(db, aoi_id=aoi.id)
-    now = datetime.utcnow()
+    now = _utcnow()
 
     false_positive_reviews = advanced.get("false_positive_reviews") if isinstance(advanced.get("false_positive_reviews"), list) else []
     analyst_verification = advanced.get("analyst_verification") if isinstance(advanced.get("analyst_verification"), dict) else {}
@@ -4895,7 +4953,7 @@ def _aoi_operations_payload(db: Session, *, aoi: GeospatialAOI, actor_user_id: i
 
 
 def _multi_aoi_payload(db: Session, *, payload: dict[str, Any]) -> dict[str, Any]:
-    now = datetime.utcnow()
+    now = _utcnow()
     aoi_ids_raw = payload.get("aoi_ids")
     aoi_ids = [int(value) for value in aoi_ids_raw if str(value).isdigit()] if isinstance(aoi_ids_raw, list) else []
     bbox_filter = payload.get("selection_box") if isinstance(payload.get("selection_box"), dict) else None
@@ -4949,7 +5007,7 @@ def _multi_aoi_payload(db: Session, *, payload: dict[str, Any]) -> dict[str, Any
         rows = [row for row in feature_rows if row.aoi_id == aoi.id]
         latest = rows[-1] if rows else None
         latest_date = latest.observation_date if latest else None
-        is_stale = latest_date is None or (datetime.utcnow().date() - latest_date).days >= 14
+        is_stale = latest_date is None or (_utcnow().date() - latest_date).days >= 14
         if is_stale:
             stale_count += 1
         else:
@@ -5236,7 +5294,7 @@ def _run_chain_of_custody_timeline(db: Session, *, run: SatellitePipelineRun, li
         timeline = timeline[-limit:]
     payload: dict[str, Any] = {
         "run_id": run.id,
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": _utcnow().isoformat(),
         "event_count": len(timeline),
         "events": timeline,
     }
@@ -5328,7 +5386,7 @@ def _scene_provenance_chain_payload(
 
 
 def _run_command_center_payload(db: Session, *, run: SatellitePipelineRun) -> dict[str, Any]:
-    now = datetime.utcnow()
+    now = _utcnow()
     diagnostics = _run_diagnostics_payload(db, run)
     reproducibility = _run_reproducibility_payload(db, run=run)
     scene_rows = _list_run_scene_rows(db, run=run)
@@ -5367,6 +5425,16 @@ def _run_command_center_payload(db: Session, *, run: SatellitePipelineRun) -> di
 
     signed_seed = json.dumps({"run_id": run.id, "status": run.status, "finished_at": run.finished_at.isoformat() if run.finished_at else None}, sort_keys=True)
     signed_export_signature = hashlib.sha256(f"{settings.secret_key}:{signed_seed}".encode("utf-8")).hexdigest()
+    notarization_seed = json.dumps(
+        {
+            "run_id": run.id,
+            "correlation_id": run.correlation_id,
+            "artifact_signature": signed_export_signature,
+            "chain_of_custody": chain_of_custody,
+        },
+        sort_keys=True,
+    )
+    notarization_digest = hashlib.sha256(notarization_seed.encode("utf-8")).hexdigest()
     publish_state = ops_state.get("publish") if isinstance(ops_state.get("publish"), dict) else {}
     publish_state.setdefault("is_published", False)
     publish_state.setdefault("published_at", None)
@@ -5438,10 +5506,12 @@ def _run_command_center_payload(db: Session, *, run: SatellitePipelineRun) -> di
             "verified": bool(signed_export_signature),
             "verified_at": now.isoformat(),
         },
-        "run_provenance_notarization_stub": {
-            "notary_provider": "internal-ledger-stub",
-            "notary_reference": f"notary-{run.id}-{now.strftime('%Y%m%d%H%M%S')}",
-            "status": "stubbed",
+        "run_provenance_notarization": {
+            "notary_provider": "internal-ledger",
+            "notary_reference": f"notary-{run.id}-{notarization_digest[:16]}",
+            "ledger_digest": notarization_digest,
+            "status": "recorded",
+            "notarized_at": now.isoformat(),
         },
         "run_decision_log": governance.get("decision_log", [])[-40:],
         "run_governance_attestation": governance.get("attestation"),
@@ -5583,7 +5653,7 @@ def _scene_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> di
             }
         )
 
-    payload = {"run_id": run.id, "generated_at": datetime.utcnow().isoformat(), "scene_count": len(rows), "rows": rows[:200]}
+    payload = {"run_id": run.id, "generated_at": _utcnow().isoformat(), "scene_count": len(rows), "rows": rows[:200]}
     return inject_catalog_capabilities(
         payload,
         prefix="scene",
@@ -5663,7 +5733,7 @@ def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> 
         alert_links = [{"id": alert.id, "title": alert.title, "status": alert.status, "href": f"/dashboard/alerts?alert_id={alert.id}"} for alert in related_alerts]
         case_link = f"/dashboard/alerts?scope=feature&feature_id={feature.id}"
         observation_datetime = datetime.combine(feature.observation_date, datetime.min.time())
-        review_sla_hours = max(0.0, (datetime.utcnow() - observation_datetime).total_seconds() / 3600.0)
+        review_sla_hours = max(0.0, (_utcnow() - observation_datetime).total_seconds() / 3600.0)
         scene_linked_id = str(features_json.get("scene_id") or "")
         threshold_sim = [
             {"threshold": 0.3, "flagged": anomaly >= 0.3},
@@ -5756,7 +5826,7 @@ def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> 
 
     payload: dict[str, Any] = {
         "run_id": run.id,
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": _utcnow().isoformat(),
         "feature_spatial_clustering_panel": spatial_panel[:20],
         "feature_temporal_clustering_panel": temporal_panel[:20],
         "feature_outlier_explanation_engine": outliers,
@@ -5797,7 +5867,7 @@ def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> 
 
 
 def _geospatial_operations_center_payload(db: Session) -> dict[str, Any]:
-    now = datetime.utcnow()
+    now = _utcnow()
     open_alerts = db.scalars(
         select(Alert).where(Alert.status.in_(["open", "acknowledged"])).order_by(desc(Alert.opened_at), desc(Alert.id)).limit(200)
     ).all()
@@ -5914,13 +5984,13 @@ def _config_health_payload(db: Session) -> dict[str, Any]:
         db.scalar(
             select(func.count(SatellitePipelineRun.id)).where(
                 SatellitePipelineRun.status == "failed",
-                SatellitePipelineRun.started_at >= (datetime.utcnow() - timedelta(days=7)),
+                SatellitePipelineRun.started_at >= (_utcnow() - timedelta(days=7)),
             )
         )
         or 0
     )
     return {
-        "checked_at": datetime.utcnow().isoformat(),
+        "checked_at": _utcnow().isoformat(),
         "postgis_enabled": bool(settings.geospatial_enable_postgis),
         "default_srid": int(settings.geospatial_default_srid),
         "stac_backends": {"sentinel2": settings.geospatial_stac_sentinel2_enabled, "sentinel1": settings.geospatial_stac_sentinel1_enabled, "landsat": settings.geospatial_stac_landsat_enabled},
@@ -5950,7 +6020,7 @@ def _self_test_payload(db: Session) -> dict[str, Any]:
     except Exception as exc:  # pragma: no cover
         checks.append({"name": "config_health_compute", "passed": False, "details": {"error": str(exc)}})
 
-    return {"checked_at": datetime.utcnow().isoformat(), "suite": "geospatial_self_test_diagnostics", "passed": all(bool(row.get("passed")) for row in checks), "checks": checks}
+    return {"checked_at": _utcnow().isoformat(), "suite": "geospatial_self_test_diagnostics", "passed": all(bool(row.get("passed")) for row in checks), "checks": checks}
 
 
 @router.get("/aois/{aoi_id}/surveillance/overview")
@@ -5992,12 +6062,12 @@ def aoi_review_workflow_update(
         "reason": payload.get("reason"),
         "feature_id": payload.get("feature_id"),
         "actor_user_id": current_user.id,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": _utcnow().isoformat(),
     }
     reviews.append(review_entry)
     advanced["false_positive_reviews"] = reviews[-200:]
     if review_entry["action"] in {"verify", "approve"}:
-        advanced["analyst_verification"] = {"verified": True, "verified_by": current_user.id, "verified_at": datetime.utcnow().isoformat()}
+        advanced["analyst_verification"] = {"verified": True, "verified_by": current_user.id, "verified_at": _utcnow().isoformat()}
     _save_aoi_operations_state(meta, advanced)
     emit_audit_event(
         db,
@@ -6026,13 +6096,13 @@ def aoi_field_visit_update(
     if action == "request":
         field_visit["status"] = "requested"
         field_visit["requested_by"] = current_user.id
-        field_visit["requested_at"] = datetime.utcnow().isoformat()
+        field_visit["requested_at"] = _utcnow().isoformat()
         field_visit["request_notes"] = payload.get("notes")
     elif action == "capture_outcome":
         field_visit["status"] = "completed"
         field_visit["outcome"] = payload.get("outcome", "observed")
         field_visit["captured_by"] = current_user.id
-        field_visit["captured_at"] = datetime.utcnow().isoformat()
+        field_visit["captured_at"] = _utcnow().isoformat()
         field_visit["outcome_notes"] = payload.get("notes")
     elif action == "checklist":
         checklist_payload = payload.get("checklist")
@@ -6175,7 +6245,7 @@ def aoi_offline_packet_export(
     aoi = _load_aoi_or_404(db, aoi_id=aoi_id)
     surveillance = _aoi_surveillance_payload(db, aoi=aoi)
     operations = _aoi_operations_payload(db, aoi=aoi, actor_user_id=current_user.id)
-    packet = {"generated_at": datetime.utcnow().isoformat(), "aoi": {"id": aoi.id, "code": aoi.code, "name": aoi.name}, "surveillance": surveillance, "operations": operations}
+    packet = {"generated_at": _utcnow().isoformat(), "aoi": {"id": aoi.id, "code": aoi.code, "name": aoi.name}, "surveillance": surveillance, "operations": operations}
     meta, advanced = _load_aoi_operations_state(db, aoi_id=aoi.id)
     advanced["offline_packet_last_generated_at"] = packet["generated_at"]
     _save_aoi_operations_state(meta, advanced)
@@ -6273,7 +6343,7 @@ def run_approval_gate_update(
             entity_id=str(run.id),
             requested_by=current_user.id,
             status=normalized_status,
-            requested_at=datetime.utcnow(),
+            requested_at=_utcnow(),
             notes=payload.get("notes"),
             created_by=current_user.id,
             updated_by=current_user.id,
@@ -6285,10 +6355,10 @@ def run_approval_gate_update(
         workflow.updated_by = current_user.id
         if normalized_status in {"approved", "rejected", "bypassed"}:
             workflow.reviewed_by = current_user.id
-            workflow.reviewed_at = datetime.utcnow()
+            workflow.reviewed_at = _utcnow()
         else:
             workflow.requested_by = current_user.id
-            workflow.requested_at = datetime.utcnow()
+            workflow.requested_at = _utcnow()
 
     ops = _run_operation_state(run)
     approval_gate = {
@@ -6343,9 +6413,9 @@ def run_handoff_update(
 ):
     run = _load_run_or_404(db, run_id=run_id)
     ops = _run_operation_state(run)
-    handoff_note = {"note": payload.get("note"), "next_operator": payload.get("next_operator"), "updated_by": current_user.id, "updated_at": datetime.utcnow().isoformat()}
+    handoff_note = {"note": payload.get("note"), "next_operator": payload.get("next_operator"), "updated_by": current_user.id, "updated_at": _utcnow().isoformat()}
     ops["handoff_note"] = handoff_note
-    ops["shift_change_summary"] = {"status": run.status, "message": payload.get("shift_message") or "Shift handoff recorded.", "updated_by": current_user.id, "updated_at": datetime.utcnow().isoformat()}
+    ops["shift_change_summary"] = {"status": run.status, "message": payload.get("shift_message") or "Shift handoff recorded.", "updated_by": current_user.id, "updated_at": _utcnow().isoformat()}
     _save_run_operation_state(run, ops)
     emit_audit_event(db, actor_user_id=current_user.id, action_type="geospatial.run.handoff.update", entity_type="satellite_pipeline_run", entity_id=str(run.id), before_payload=None, after_payload=handoff_note)
     db.commit()
@@ -6363,12 +6433,12 @@ def run_audit_approval_update(
     status = str(payload.get("status") or "pending")
     workflow = db.scalar(select(ApprovalWorkflow).where(ApprovalWorkflow.entity_type == "geospatial_run", ApprovalWorkflow.entity_id == str(run.id)))
     if workflow is None:
-        workflow = ApprovalWorkflow(entity_type="geospatial_run", entity_id=str(run.id), requested_by=current_user.id, status=status, requested_at=datetime.utcnow(), notes=payload.get("notes"), created_by=current_user.id, updated_by=current_user.id)
+        workflow = ApprovalWorkflow(entity_type="geospatial_run", entity_id=str(run.id), requested_by=current_user.id, status=status, requested_at=_utcnow(), notes=payload.get("notes"), created_by=current_user.id, updated_by=current_user.id)
         db.add(workflow)
     else:
         workflow.status = status
         workflow.reviewed_by = current_user.id
-        workflow.reviewed_at = datetime.utcnow()
+        workflow.reviewed_at = _utcnow()
         workflow.notes = payload.get("notes")
         workflow.updated_by = current_user.id
     emit_audit_event(db, actor_user_id=current_user.id, action_type="geospatial.run.audit_approval.update", entity_type="satellite_pipeline_run", entity_id=str(run.id), before_payload=None, after_payload={"workflow_status": status, "workflow_id": workflow.id})
@@ -6386,7 +6456,7 @@ def run_manual_override_update(
 ):
     run = _load_run_or_404(db, run_id=run_id)
     ops = _run_operation_state(run)
-    override = {"enabled": bool(payload.get("enabled", True)), "reason": payload.get("reason"), "set_by": current_user.id, "set_at": datetime.utcnow().isoformat()}
+    override = {"enabled": bool(payload.get("enabled", True)), "reason": payload.get("reason"), "set_by": current_user.id, "set_at": _utcnow().isoformat()}
     ops["manual_override"] = override
     _save_run_operation_state(run, ops)
     emit_audit_event(db, actor_user_id=current_user.id, action_type="geospatial.run.manual_override.update", entity_type="satellite_pipeline_run", entity_id=str(run.id), before_payload=None, after_payload=override)
@@ -6408,9 +6478,9 @@ def run_publish_workflow_update(
     ops = _run_operation_state(run)
     publish_state = ops.get("publish") if isinstance(ops.get("publish"), dict) else {}
     publish_state["is_published"] = action == "publish"
-    publish_state["published_at"] = datetime.utcnow().isoformat() if action == "publish" else None
+    publish_state["published_at"] = _utcnow().isoformat() if action == "publish" else None
     publish_state["published_by"] = current_user.id if action == "publish" else None
-    publish_state["unpublished_at"] = datetime.utcnow().isoformat() if action == "unpublish" else None
+    publish_state["unpublished_at"] = _utcnow().isoformat() if action == "unpublish" else None
     publish_state["channel"] = str(payload.get("channel") or publish_state.get("channel") or "internal")
     ops["publish"] = publish_state
     _save_run_operation_state(run, ops)
@@ -6453,12 +6523,12 @@ def run_archive_workflow_update(
     if action == "archive":
         archive_state["is_archived"] = True
         archive_state["archive_tier"] = str(payload.get("tier") or "cold")
-        archive_state["archived_at"] = datetime.utcnow().isoformat()
+        archive_state["archived_at"] = _utcnow().isoformat()
         archive_state["archived_by"] = current_user.id
         archive_state["restore_status"] = "idle"
     else:
         archive_state["is_archived"] = False
-        archive_state["restored_at"] = datetime.utcnow().isoformat()
+        archive_state["restored_at"] = _utcnow().isoformat()
         archive_state["restore_requested_by"] = current_user.id
         archive_state["restore_status"] = "completed"
     retention_policy["retention_days"] = int(payload.get("retention_days") or retention_policy.get("retention_days") or 365)
@@ -6511,21 +6581,21 @@ def run_governance_update(
             "decision": payload.get("decision"),
             "notes": payload.get("notes"),
             "actor_user_id": current_user.id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
         }
         decision_log.append(decision_entry)
     elif action == "assign_reviewer":
         reviewer_assignment = {
             "reviewer_user_id": payload.get("reviewer_user_id"),
             "assigned_by": current_user.id,
-            "assigned_at": datetime.utcnow().isoformat(),
+            "assigned_at": _utcnow().isoformat(),
         }
     elif action == "checklist":
         checklist_entry = {
             "item": payload.get("item"),
             "done": bool(payload.get("done", False)),
             "updated_by": current_user.id,
-            "updated_at": datetime.utcnow().isoformat(),
+            "updated_at": _utcnow().isoformat(),
         }
         reviewer_checklist.append(checklist_entry)
     elif action == "comment":
@@ -6533,14 +6603,14 @@ def run_governance_update(
             "comment": payload.get("comment"),
             "thread_id": payload.get("thread_id") or "default",
             "actor_user_id": current_user.id,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": _utcnow().isoformat(),
         }
         review_comments.append(comment_entry)
     elif action == "attest":
         attestation = {
             "status": str(payload.get("status") or "attested"),
             "attested_by": current_user.id,
-            "attested_at": datetime.utcnow().isoformat(),
+            "attested_at": _utcnow().isoformat(),
             "notes": payload.get("notes"),
         }
     elif action == "merge_duplicate":
@@ -6548,14 +6618,14 @@ def run_governance_update(
             "source_run_ids": payload.get("source_run_ids", []),
             "target_run_id": run.id,
             "performed_by": current_user.id,
-            "performed_at": datetime.utcnow().isoformat(),
+            "performed_at": _utcnow().isoformat(),
         }
     elif action == "split_combined":
         governance["last_split_action"] = {
             "target_run_id": run.id,
             "split_parts": payload.get("split_parts", 2),
             "performed_by": current_user.id,
-            "performed_at": datetime.utcnow().isoformat(),
+            "performed_at": _utcnow().isoformat(),
         }
     else:
         raise HTTPException(status_code=400, detail="Invalid governance action")
@@ -6600,7 +6670,7 @@ def run_scenario_ops_update(
     action = str(payload.get("action") or "dry_run").lower()
     ops = _run_operation_state(run)
     scenario_ops = ops.get("scenario_ops") if isinstance(ops.get("scenario_ops"), dict) else {}
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = _utcnow().isoformat()
 
     if action == "replay":
         scenario_ops["last_replay"] = {
@@ -6684,7 +6754,7 @@ def run_signed_export_package(
 ):
     run = _load_run_or_404(db, run_id=run_id)
     manifest = _run_artifact_manifest_payload(db, run=run)
-    signed_blob = {"run_id": run.id, "manifest": manifest, "signed_at": datetime.utcnow().isoformat()}
+    signed_blob = {"run_id": run.id, "manifest": manifest, "signed_at": _utcnow().isoformat()}
     signature = hashlib.sha256(f'{settings.secret_key}:{json.dumps(signed_blob, sort_keys=True, default=str)}'.encode("utf-8")).hexdigest()
     signed_blob["signature"] = signature
     payload = json.dumps(signed_blob, indent=2, default=str).encode("utf-8")
@@ -6705,7 +6775,7 @@ def run_evidence_bundle(
     approval_gate = _run_approval_gate_payload(db, run=run)
     payload = {
         "run_id": run.id,
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": _utcnow().isoformat(),
         "detail": detail,
         "diagnostics": diagnostics,
         "reproducibility": compare_ref,
@@ -6748,7 +6818,7 @@ def update_feature_annotation(
         raise HTTPException(status_code=404, detail="Feature not found")
     features_json = feature.features_json or {}
     annotations = features_json.get("annotations") if isinstance(features_json.get("annotations"), list) else []
-    annotation = {"annotation": payload.get("annotation"), "label": payload.get("label"), "actor_user_id": current_user.id, "timestamp": datetime.utcnow().isoformat()}
+    annotation = {"annotation": payload.get("annotation"), "label": payload.get("label"), "actor_user_id": current_user.id, "timestamp": _utcnow().isoformat()}
     annotations.append(annotation)
     features_json["annotations"] = annotations[-200:]
     feature.features_json = features_json
@@ -6772,7 +6842,7 @@ def update_feature_review(
     features_json["review_status"] = decision
     features_json["review_notes"] = payload.get("notes")
     features_json["reviewed_by"] = current_user.id
-    features_json["reviewed_at"] = datetime.utcnow().isoformat()
+    features_json["reviewed_at"] = _utcnow().isoformat()
     feature.features_json = features_json
     emit_audit_event(db, actor_user_id=current_user.id, action_type="geospatial.feature.review.update", entity_type="geospatial_feature", entity_id=str(feature.id), before_payload=None, after_payload={"decision": decision, "notes": payload.get("notes")})
     db.commit()
@@ -6795,7 +6865,7 @@ def recalibrate_feature_confidence(
     feature.observation_confidence_score = updated_confidence
     quality = feature.quality_json or {}
     history = quality.get("confidence_recalibration_history") if isinstance(quality.get("confidence_recalibration_history"), list) else []
-    history.append({"from": current_confidence, "to": updated_confidence, "target": target_confidence, "by": current_user.id, "at": datetime.utcnow().isoformat()})
+    history.append({"from": current_confidence, "to": updated_confidence, "target": target_confidence, "by": current_user.id, "at": _utcnow().isoformat()})
     quality["confidence_recalibration_history"] = history[-40:]
     feature.quality_json = quality
     emit_audit_event(db, actor_user_id=current_user.id, action_type="geospatial.feature.confidence_recalibrate", entity_type="geospatial_feature", entity_id=str(feature.id), before_payload={"confidence": current_confidence}, after_payload={"confidence": updated_confidence, "target": target_confidence})
@@ -6808,7 +6878,7 @@ def generate_executive_anomaly_brief(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[CurrentUser, Depends(require_role(*ADMIN_ROLES, "executive_viewer", "policy_reviewer"))],
 ):
-    now = datetime.utcnow()
+    now = _utcnow()
     brief_payload = _executive_anomaly_brief_payload(db, now=now)
     report = ReportRecord(
         category="geospatial_executive_anomaly_brief",
@@ -6888,7 +6958,7 @@ def generate_geospatial_weekly_digest(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[CurrentUser, Depends(require_role(*ADMIN_ROLES, "executive_viewer", "policy_reviewer"))],
 ):
-    now = datetime.utcnow()
+    now = _utcnow()
     cutoff = now - timedelta(days=7)
     run_count = int(db.scalar(select(func.count(SatellitePipelineRun.id)).where(SatellitePipelineRun.started_at >= cutoff)) or 0)
     anomaly_count = int(db.scalar(select(func.count(Alert.id)).where(Alert.opened_at >= cutoff)) or 0)
@@ -6910,7 +6980,7 @@ def generate_geospatial_monthly_performance_report(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[CurrentUser, Depends(require_role(*ADMIN_ROLES, "executive_viewer", "policy_reviewer"))],
 ):
-    now = datetime.utcnow()
+    now = _utcnow()
     month_start = now.date().replace(day=1)
     run_rows = db.scalars(select(SatellitePipelineRun).where(SatellitePipelineRun.started_at >= datetime.combine(month_start, datetime.min.time()))).all()
     success_rate = round(_safe_ratio(sum(1 for row in run_rows if row.status == "completed"), max(1, len(run_rows))), 4)

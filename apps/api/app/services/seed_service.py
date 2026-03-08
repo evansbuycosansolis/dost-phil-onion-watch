@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import select
@@ -63,7 +63,7 @@ MUNICIPALITIES = [
 
 
 def _ensure_demo_geospatial_aoi(db: Session) -> None:
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.models import GeospatialAOI, GeospatialAOIMetadata, GeospatialAOIVersion, Municipality
     from app.services.stac_service import geojson_to_bbox
@@ -136,7 +136,7 @@ def _ensure_demo_geospatial_aoi(db: Session) -> None:
             boundary_wkt=aoi.boundary_wkt,
             changed_by=None,
             change_reason="seed",
-            changed_at=datetime.utcnow(),
+            changed_at=datetime.now(timezone.utc),
         )
     )
     db.add(
@@ -247,7 +247,7 @@ def _ensure_demo_geospatial_runs(db: Session) -> None:
 
     aoi = db.scalar(select(GeospatialAOI).where(GeospatialAOI.code == "OM-SJ-DEMO-AOI"))
     aoi_id = aoi.id if aoi else None
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     db.add_all(
         [
@@ -326,7 +326,7 @@ def _ensure_demo_geospatial_collaboration(db: Session) -> None:
                 aoi_id=aoi.id,
                 user_id=super_admin.id,
                 is_pinned=True,
-                pinned_at=datetime.utcnow() - timedelta(days=2),
+                pinned_at=datetime.now(timezone.utc) - timedelta(days=2),
                 created_by=super_admin.id,
                 updated_by=super_admin.id,
             )
@@ -399,7 +399,7 @@ def _ensure_demo_geospatial_collaboration(db: Session) -> None:
                 status="queued",
                 message="Seeded queue event",
                 details_json={"seeded": True, "queue_priority": run.queue_priority},
-                logged_at=(run.started_at or datetime.utcnow()) - timedelta(minutes=2),
+                logged_at=(run.started_at or datetime.now(timezone.utc)) - timedelta(minutes=2),
                 created_by=super_admin.id,
                 updated_by=super_admin.id,
             )
@@ -411,7 +411,7 @@ def _ensure_demo_geospatial_collaboration(db: Session) -> None:
                 status=run.status,
                 message="Seeded execution event",
                 details_json={"seeded": True, "result_keys": list((run.results_json or {}).keys())},
-                logged_at=run.finished_at or run.started_at or datetime.utcnow(),
+                logged_at=run.finished_at or run.started_at or datetime.now(timezone.utc),
                 created_by=super_admin.id,
                 updated_by=super_admin.id,
             )
@@ -458,8 +458,8 @@ def _ensure_demo_geospatial_collaboration(db: Session) -> None:
                 retry_strategy="exponential",
                 queue_priority=90,
                 is_active=True,
-                next_run_at=datetime.utcnow() + timedelta(days=7),
-                last_run_at=datetime.utcnow() - timedelta(days=22),
+                next_run_at=datetime.now(timezone.utc) + timedelta(days=7),
+                last_run_at=datetime.now(timezone.utc) - timedelta(days=22),
                 last_run_status="completed",
                 sources_json={"sources": ["sentinel-2", "sentinel-1"]},
                 parameters_json={"limit_per_source": 200},

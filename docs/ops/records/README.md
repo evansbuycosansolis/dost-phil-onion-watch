@@ -7,6 +7,7 @@ Use this folder for execution artifacts referenced by rollout and incident runbo
 - `geospatial-rollout/`
 - `geospatial-kpi/`
 - `geospatial-incidents/`
+- `release/`
 
 ## Naming convention
 
@@ -35,3 +36,9 @@ Incident:
 - evidence snapshot bundle
 - communication log
 - corrective actions
+
+Release:
+
+- validation bundle (typecheck/build/tests/e2e/lint)
+- deployment render/apply evidence
+- rollout and rollback command log

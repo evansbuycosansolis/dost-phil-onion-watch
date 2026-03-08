@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -309,7 +309,7 @@ def _entity_snapshot_risk(row: GeospatialRiskItem) -> dict:
 
 
 def _generate_incident_key(db: Session) -> str:
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     day_end = day_start + timedelta(days=1)
     count = int(
@@ -332,7 +332,7 @@ def _generate_incident_key(db: Session) -> str:
 
 
 def _generate_validation_run_key(db: Session) -> str:
-    base = datetime.utcnow().strftime("VA-RUN-%Y%m%d-%H%M%S")
+    base = datetime.now(timezone.utc).strftime("VA-RUN-%Y%m%d-%H%M%S")
     if db.scalar(select(GeospatialValidationRun.id).where(GeospatialValidationRun.run_key == base)) is None:
         return base
     for idx in range(1, 100):
@@ -516,7 +516,7 @@ def create_kpi_scorecard(
         computed_status=overall_status,
         source_pointers_json={
             **payload.source_pointers,
-            "computed_at": datetime.utcnow().isoformat(),
+            "computed_at": datetime.now(timezone.utc).isoformat(),
             "metric_statuses": metric_statuses,
         },
         created_by=current_user.id,
@@ -589,7 +589,7 @@ def compute_kpi_scorecard(
     row.computed_status = overall_status
     row.source_pointers_json = {
         **(row.source_pointers_json or {}),
-        "computed_at": datetime.utcnow().isoformat(),
+        "computed_at": datetime.now(timezone.utc).isoformat(),
         "metric_statuses": metric_statuses,
     }
     row.updated_by = current_user.id
@@ -619,7 +619,7 @@ def create_incident(
     if db.scalar(select(GeospatialIncident.id).where(GeospatialIncident.incident_key == key)) is not None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Incident key already exists")
 
-    started_at = payload.started_at or datetime.utcnow()
+    started_at = payload.started_at or datetime.now(timezone.utc)
     row = GeospatialIncident(
         incident_key=key,
         severity=payload.severity,
@@ -643,7 +643,7 @@ def create_incident(
     append_incident_comms_entry(
         row,
         {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "created",
             "actor_user_id": current_user.id,
             "summary": payload.summary,
@@ -723,14 +723,14 @@ def update_incident(
         row.slo_target_minutes = default_incident_slo_target_minutes(row.severity)
 
     if row.status == "mitigating" and row.mitigated_at is None:
-        row.mitigated_at = datetime.utcnow()
+        row.mitigated_at = datetime.now(timezone.utc)
     if row.status == "resolved" and row.resolved_at is None:
-        row.resolved_at = datetime.utcnow()
+        row.resolved_at = datetime.now(timezone.utc)
 
     append_incident_comms_entry(
         row,
         {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "updated",
             "actor_user_id": current_user.id,
             "changes": list(updates.keys()),
@@ -766,7 +766,7 @@ def resolve_incident(
 
     before = _entity_snapshot_incident(row)
     row.status = "resolved"
-    row.resolved_at = datetime.utcnow()
+    row.resolved_at = datetime.now(timezone.utc)
     if payload.root_cause:
         row.root_cause = payload.root_cause
     if payload.corrective_actions:
@@ -779,7 +779,7 @@ def resolve_incident(
     append_incident_comms_entry(
         row,
         {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "resolved",
             "actor_user_id": current_user.id,
             "resolution_note": payload.resolution_note,
@@ -817,7 +817,7 @@ def postmortem_incident(
     before = _entity_snapshot_incident(row)
     row.status = "postmortem"
     if row.resolved_at is None:
-        row.resolved_at = datetime.utcnow()
+        row.resolved_at = datetime.now(timezone.utc)
     row.root_cause = payload.root_cause
     if payload.corrective_actions:
         row.corrective_actions_json = payload.corrective_actions
@@ -830,14 +830,14 @@ def postmortem_incident(
     append_incident_comms_entry(
         row,
         {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": "postmortem_completed",
             "actor_user_id": current_user.id,
             **lessons_payload,
         },
     )
 
-    row.postmortem_completed_at = datetime.utcnow()
+    row.postmortem_completed_at = datetime.now(timezone.utc)
     row.updated_by = current_user.id
     db.flush()
 
@@ -875,7 +875,7 @@ def create_validation_run(
         executed_by_user_id=current_user.id,
         reviewed_by_user_id=None,
         signoff_at=None,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
         finished_at=None,
         results_summary_json={"total": 0, "pass": 0, "fail": 0, "skip": 0, "pass_rate": 0.0},
         evidence_links_json=payload.evidence_links,
@@ -989,7 +989,7 @@ def upsert_validation_results(
                 status=item.status,
                 notes=item.notes,
                 evidence_json=item.evidence,
-                executed_at=datetime.utcnow(),
+                executed_at=datetime.now(timezone.utc),
                 created_by=current_user.id,
                 updated_by=current_user.id,
             )
@@ -998,7 +998,7 @@ def upsert_validation_results(
             existing.status = item.status
             existing.notes = item.notes
             existing.evidence_json = item.evidence
-            existing.executed_at = datetime.utcnow()
+            existing.executed_at = datetime.now(timezone.utc)
             existing.updated_by = current_user.id
         db.flush()
         upserted.append(existing)
@@ -1010,7 +1010,7 @@ def upsert_validation_results(
 
     summary = recalculate_validation_run_summary(db, run)
     if payload.signoff:
-        run.signoff_at = datetime.utcnow()
+        run.signoff_at = datetime.now(timezone.utc)
     run.updated_by = current_user.id
     db.flush()
 
@@ -1187,7 +1187,7 @@ def escalate_risk_item(
         task_type="risk_escalation",
         title=f"Escalated risk {row.risk_key}",
         description=f"Risk {row.risk_key} escalated to level {row.escalation_level}.",
-        due_at=datetime.utcnow() + timedelta(days=1),
+        due_at=datetime.now(timezone.utc) + timedelta(days=1),
         assigned_to_user_id=row.owner_user_id,
         related_entity_type="geospatial_risk_item",
         related_entity_id=str(row.id),
@@ -1231,7 +1231,7 @@ def close_risk_item(
 
     metadata = dict(row.metadata_json or {})
     metadata["resolution"] = payload.resolution
-    metadata["closed_at"] = datetime.utcnow().isoformat()
+    metadata["closed_at"] = datetime.now(timezone.utc).isoformat()
     metadata["closed_by_user_id"] = current_user.id
     row.metadata_json = metadata
     row.updated_by = current_user.id

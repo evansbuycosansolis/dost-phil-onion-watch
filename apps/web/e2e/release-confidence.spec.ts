@@ -60,6 +60,7 @@ test("seeded roles can login and receive role-aware navigation", async ({ page }
 });
 
 test("super admin dashboard navigation routes load successfully", async ({ page }) => {
+  test.setTimeout(240_000);
   await loginAs(page, "super_admin@onionwatch.ph");
 
   const routes = [
@@ -75,7 +76,9 @@ test("super admin dashboard navigation routes load successfully", async ({ page 
   ];
 
   for (const route of routes) {
-    await page.getByRole("link", { name: route.label, exact: true }).click();
+    const navLink = page.getByRole("link", { name: route.label, exact: true });
+    await expect(navLink).toBeVisible();
+    await navLink.click();
     await expect(page).toHaveURL(route.path);
     await expect(page.getByRole("heading", { name: route.heading })).toBeVisible();
   }

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: phil-onion-watch
+data:
+  ENVIRONMENT: "production"
+  DATABASE_URL: "postgresql+psycopg://onion:CHANGE_ME@postgres:5432/phil_onion_watch"
+  REDIS_URL: "redis://redis:6379/0"
+  FAISS_INDEX_PATH: "/workspace/data/faiss/knowledge.index"
+  FAISS_METADATA_PATH: "/workspace/data/faiss/knowledge_meta.json"
+  REPORTS_PATH: "/workspace/data/reports"
+  SCHEDULER_TIMEZONE: "Asia/Manila"
+  OIDC_ENABLED: "false"
+  ENFORCE_OIDC_FOR_PRIVILEGED_ROLES: "false"
+  ENFORCE_MFA_FOR_PRIVILEGED_TOKENS: "false"

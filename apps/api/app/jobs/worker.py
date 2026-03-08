@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Callable
 from uuid import uuid4
 
@@ -36,7 +36,7 @@ def _record_job_start(db, job_name: str, correlation_id: str | None = None) -> J
         job_name=job_name,
         status="running",
         correlation_id=correlation_id,
-        started_at=datetime.utcnow(),
+        started_at=datetime.now(timezone.utc),
     )
     db.add(job)
     db.flush()
@@ -45,7 +45,7 @@ def _record_job_start(db, job_name: str, correlation_id: str | None = None) -> J
 
 def _record_job_success(db, job: JobRun, details: dict | None = None) -> None:
     job.status = "completed"
-    job.finished_at = datetime.utcnow()
+    job.finished_at = datetime.now(timezone.utc)
     job.details_json = details or {}
     job.message = "Scheduled task completed"
     db.flush()
@@ -53,7 +53,7 @@ def _record_job_success(db, job: JobRun, details: dict | None = None) -> None:
 
 def _record_job_failure(db, job: JobRun, message: str) -> None:
     job.status = "failed"
-    job.finished_at = datetime.utcnow()
+    job.finished_at = datetime.now(timezone.utc)
     job.message = message
     db.flush()
 
