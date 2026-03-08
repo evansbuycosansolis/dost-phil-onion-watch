@@ -20,6 +20,7 @@ from app.api.v1 import (
     farmers,
     forecasting,
     geospatial,
+    geospatial_playbooks,
     imports,
     municipalities,
     prices,
@@ -135,5 +136,6 @@ app.include_router(dashboard.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(geospatial.router, prefix="/api/v1")
+app.include_router(geospatial_playbooks.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 app.include_router(audit.router, prefix="/api/v1")

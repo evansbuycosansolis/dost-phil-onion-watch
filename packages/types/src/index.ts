@@ -523,3 +523,140 @@ export interface AdminOverview {
   forecast_model_diagnostics: AdminForecastDiagnostics;
   system_settings: Record<string, unknown>;
 }
+
+export type GeospatialRolloutGateStatus = "draft" | "ready" | "passed" | "failed";
+export type GeospatialKpiStatus = "green" | "yellow" | "red";
+export type GeospatialIncidentSeverity = "SEV0" | "SEV1" | "SEV2" | "SEV3";
+export type GeospatialIncidentStatus = "open" | "mitigating" | "resolved" | "postmortem";
+export type GeospatialValidationRunStatus = "planned" | "running" | "passed" | "failed";
+export type GeospatialValidationResultStatus = "pass" | "fail" | "skip";
+export type GeospatialRiskStatus = "open" | "mitigating" | "accepted" | "closed";
+
+export interface GeospatialRolloutWave {
+  id: number;
+  name: string;
+  wave_number: number;
+  region_scope: string;
+  start_date?: string;
+  end_date?: string;
+  owner_user_id?: number;
+  reviewer_ids: number[];
+  gate_status: GeospatialRolloutGateStatus;
+  gate_notes?: string;
+  pass_fail_criteria: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeospatialKpiScorecard {
+  id: number;
+  period_month: string;
+  region_scope: string;
+  metrics: Record<string, unknown>;
+  thresholds: Record<string, unknown>;
+  computed_status: GeospatialKpiStatus;
+  source_pointers: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeospatialIncident {
+  id: number;
+  incident_key: string;
+  severity: GeospatialIncidentSeverity;
+  status: GeospatialIncidentStatus;
+  started_at: string;
+  mitigated_at?: string;
+  resolved_at?: string;
+  summary: string;
+  impact?: string;
+  root_cause?: string;
+  corrective_actions: Array<Record<string, unknown>>;
+  evidence_pack: Record<string, unknown>;
+  comms_log: Array<Record<string, unknown>>;
+  created_by_user_id?: number;
+  assigned_to_user_id?: number;
+  slo_target_minutes: number;
+  postmortem_completed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeospatialValidationRun {
+  id: number;
+  run_key: string;
+  scope: string;
+  model_version?: string;
+  threshold_set_version?: string;
+  status: GeospatialValidationRunStatus;
+  executed_by_user_id?: number;
+  reviewed_by_user_id?: number;
+  signoff_at?: string;
+  started_at: string;
+  finished_at?: string;
+  results_summary: Record<string, unknown>;
+  evidence_links: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeospatialValidationTestcase {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  expected: string;
+  severity: string;
+  category: string;
+  is_active: boolean;
+}
+
+export interface GeospatialValidationResult {
+  id: number;
+  run_id: number;
+  testcase_id: number;
+  testcase_code: string;
+  status: GeospatialValidationResultStatus;
+  notes?: string;
+  evidence: Record<string, unknown>;
+  executed_at: string;
+}
+
+export interface GeospatialRiskItem {
+  id: number;
+  risk_key: string;
+  title: string;
+  description: string;
+  likelihood: number;
+  impact: number;
+  rating: number;
+  trigger?: string;
+  mitigation?: string;
+  owner_user_id?: number;
+  status: GeospatialRiskStatus;
+  next_review_date?: string;
+  target_close_date?: string;
+  escalation_level: number;
+  board_notes?: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeospatialOpsTask {
+  id: number;
+  task_type: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  due_at?: string;
+  assigned_to_user_id?: number;
+  related_entity_type?: string;
+  related_entity_id?: string;
+  payload: Record<string, unknown>;
+  completed_at?: string;
+  notification_sent_at?: string;
+  created_at: string;
+  updated_at: string;
+}

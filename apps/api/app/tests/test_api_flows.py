@@ -1672,6 +1672,174 @@ def test_admin_overview_contains_forecast_diagnostics(client, auth_headers):
     assert "queued" in payload["report_distribution_status"]
 
 
+def test_geospatial_playbooks_wave_gate_and_kpi_compute(client, auth_headers):
+    wave_create = client.post(
+        "/api/v1/geospatial/waves",
+        headers=auth_headers,
+        json={
+            "name": "Wave Integration Test",
+            "wave_number": 91,
+            "region_scope": "Occidental Mindoro",
+            "reviewer_ids": [1],
+            "pass_fail_criteria": {"gate_a_data_sources_connected": True, "gate_b_quality_passed": False},
+        },
+    )
+    assert wave_create.status_code == 201
+    wave_id = wave_create.json()["id"]
+
+    gate_eval = client.post(
+        f"/api/v1/geospatial/waves/{wave_id}/gate-evaluate",
+        headers=auth_headers,
+        json={
+            "gate_notes": "Automated gate check",
+            "pass_fail_criteria": {"gate_b_quality_passed": True, "gate_c_training_complete": True},
+        },
+    )
+    assert gate_eval.status_code == 200
+    assert gate_eval.json()["gate_status"] == "passed"
+
+    scorecard_create = client.post(
+        "/api/v1/geospatial/kpi/scorecards",
+        headers=auth_headers,
+        json={
+            "period_month": date.today().replace(day=1).isoformat(),
+            "region_scope": "Occidental Mindoro (test)",
+            "metrics": {"GEO-KPI-001": 0.82, "GEO-KPI-002": 30, "GEO-KPI-003": 80},
+            "thresholds": {"GEO-KPI-002": {"direction": "lower", "green": 24, "amber": 36}},
+            "source_pointers": {"from": ["integration-test"]},
+        },
+    )
+    assert scorecard_create.status_code == 201
+    scorecard_id = scorecard_create.json()["id"]
+
+    recompute = client.post(
+        f"/api/v1/geospatial/kpi/scorecards/{scorecard_id}/compute",
+        headers=auth_headers,
+        json={"thresholds": {"GEO-KPI-003": {"direction": "lower", "green": 60, "amber": 72}}},
+    )
+    assert recompute.status_code == 200
+    assert recompute.json()["computed_status"] in {"yellow", "red", "green"}
+
+
+def test_geospatial_playbooks_incident_validation_and_risk_lifecycle(client, auth_headers):
+    incident = client.post(
+        "/api/v1/geospatial/incidents",
+        headers=auth_headers,
+        json={
+            "severity": "SEV1",
+            "summary": "Integration incident test",
+            "impact": "Service degradation",
+            "corrective_actions": [{"action": "Investigate data source"}],
+            "evidence_pack": {"links": ["https://example.test/evidence-1"]},
+            "slo_target_minutes": 60,
+        },
+    )
+    assert incident.status_code == 201
+    incident_id = incident.json()["id"]
+
+    incident_update = client.patch(
+        f"/api/v1/geospatial/incidents/{incident_id}",
+        headers=auth_headers,
+        json={"status": "mitigating", "root_cause": "Upstream timeout"},
+    )
+    assert incident_update.status_code == 200
+    assert incident_update.json()["status"] == "mitigating"
+
+    incident_resolve = client.post(
+        f"/api/v1/geospatial/incidents/{incident_id}/resolve",
+        headers=auth_headers,
+        json={
+            "root_cause": "Resolved upstream timeout",
+            "corrective_actions": [{"action": "Increased retry budget"}],
+            "evidence_pack": {"links": ["https://example.test/evidence-2"]},
+            "resolution_note": "Mitigated and monitored",
+        },
+    )
+    assert incident_resolve.status_code == 200
+    assert incident_resolve.json()["status"] == "resolved"
+
+    run = client.post(
+        "/api/v1/geospatial/validation/runs",
+        headers=auth_headers,
+        json={
+            "scope": "Integration validation run",
+            "model_version": "v-it-1",
+            "threshold_set_version": "t-it-1",
+            "evidence_links": ["https://example.test/run-evidence"],
+        },
+    )
+    assert run.status_code == 201
+    run_id = run.json()["id"]
+
+    testcases = client.get("/api/v1/geospatial/validation/testcases", headers=auth_headers)
+    assert testcases.status_code == 200
+    assert len(testcases.json()) >= 10
+
+    result_upsert = client.post(
+        f"/api/v1/geospatial/validation/runs/{run_id}/results",
+        headers=auth_headers,
+        json={
+            "signoff": True,
+            "results": [
+                {"testcase_code": "VA-T01", "status": "pass", "notes": "ok", "evidence": {"links": ["https://example.test/t1"]}},
+                {"testcase_code": "VA-T02", "status": "fail", "notes": "retry issue", "evidence": {"links": ["https://example.test/t2"]}},
+            ],
+        },
+    )
+    assert result_upsert.status_code == 200
+    rows = result_upsert.json()
+    assert any(row["testcase_code"] == "VA-T01" for row in rows)
+    assert any(row["testcase_code"] == "VA-T02" for row in rows)
+
+    listed_results = client.get(f"/api/v1/geospatial/validation/runs/{run_id}/results", headers=auth_headers)
+    assert listed_results.status_code == 200
+    assert listed_results.json()
+
+    risk = client.post(
+        "/api/v1/geospatial/risks",
+        headers=auth_headers,
+        json={
+            "risk_key": f"RISK-{datetime.utcnow().strftime('%H%M%S')}",
+            "title": "Integration risk item",
+            "description": "Risk lifecycle integration test",
+            "likelihood": 3,
+            "impact": 4,
+            "status": "open",
+            "next_review_date": date.today().isoformat(),
+            "target_close_date": (date.today() + timedelta(days=10)).isoformat(),
+        },
+    )
+    assert risk.status_code == 201
+    risk_id = risk.json()["id"]
+
+    escalate = client.post(
+        f"/api/v1/geospatial/risks/{risk_id}/escalate",
+        headers=auth_headers,
+        json={"escalation_level": 3, "board_notes": "Escalated in integration test"},
+    )
+    assert escalate.status_code == 200
+    assert escalate.json()["status"] == "mitigating"
+    assert escalate.json()["escalation_level"] >= 3
+
+    close = client.post(
+        f"/api/v1/geospatial/risks/{risk_id}/close",
+        headers=auth_headers,
+        json={"board_notes": "Closed after mitigation", "resolution": "Controls deployed"},
+    )
+    assert close.status_code == 200
+    assert close.json()["status"] == "closed"
+
+    tasks = client.get("/api/v1/geospatial/ops/tasks?limit=200", headers=auth_headers)
+    assert tasks.status_code == 200
+    assert any(task["task_type"] in {"risk_escalation", "kpi_scorecard_review", "incident_slo_breach"} for task in tasks.json())
+
+    risk_reminders = client.post("/api/v1/geospatial/automation/risk-review-reminders", headers=auth_headers)
+    assert risk_reminders.status_code == 200
+
+    slo_checks = client.post("/api/v1/geospatial/automation/incident-slo-checks", headers=auth_headers)
+    assert slo_checks.status_code == 200
+
+
 def test_openapi_contains_tag_examples_and_router_responses(client):
     response = client.get("/openapi.json")
     assert response.status_code == 200

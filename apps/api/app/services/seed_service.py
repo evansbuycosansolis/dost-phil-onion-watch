@@ -37,6 +37,7 @@ from app.models import (
 )
 from app.services.anomaly_service import ensure_default_threshold_configs
 from app.services.document_ingestion_service import ingest_document
+from app.services.geospatial_playbooks_service import ensure_default_validation_testcases
 from app.services.report_distribution_service import ensure_default_report_recipient_groups
 
 DEMO_PASSWORD = "ChangeMe123!"
@@ -943,6 +944,7 @@ def seed_operational_data(db: Session) -> dict:
     _ensure_demo_geospatial_features(db)
     _ensure_demo_geospatial_runs(db)
     _ensure_demo_geospatial_collaboration(db)
+    ensure_default_validation_testcases(db)
     documents_seeded = _ensure_seed_documents()
 
     db.flush()

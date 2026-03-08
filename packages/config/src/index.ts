@@ -32,6 +32,11 @@ export const routes = {
   dashboardGeospatialAOIs: "/dashboard/geospatial/aois",
   dashboardGeospatialExecutive: "/dashboard/geospatial/executive",
   dashboardGeospatialIntelligence: "/dashboard/geospatial/intelligence",
+  dashboardGeospatialOpsRollout: "/dashboard/ops/geospatial/rollout",
+  dashboardGeospatialOpsKpi: "/dashboard/ops/geospatial/kpi",
+  dashboardGeospatialOpsIncidents: "/dashboard/ops/geospatial/incidents",
+  dashboardGeospatialOpsValidation: "/dashboard/ops/geospatial/validation",
+  dashboardGeospatialOpsRisks: "/dashboard/ops/geospatial/risks",
   dashboardAdmin: "/dashboard/admin",
 } as const;
 

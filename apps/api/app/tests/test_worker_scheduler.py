@@ -76,3 +76,12 @@ def test_observability_alerting_for_degraded_endpoints_and_job_failures(monkeypa
     assert any(row["alert_type"] == "degraded_endpoint" for row in result["active_alerts"])
     assert any(row["alert_type"] == "job_failure_rate" for row in result["active_alerts"])
     assert sent_alerts["count"] >= 2
+
+
+def test_scheduler_registers_geospatial_playbook_jobs():
+    scheduler = worker.create_scheduler()
+    job_ids = {job.id for job in scheduler.get_jobs()}
+
+    assert "geospatial_kpi_generation" in job_ids
+    assert "geospatial_risk_review_reminder" in job_ids
+    assert "geospatial_incident_slo_check" in job_ids

@@ -30,6 +30,14 @@ import type {
   ReportExportMetadata,
   ReportRecord,
   ReportRecipientGroup,
+  GeospatialIncident,
+  GeospatialKpiScorecard,
+  GeospatialOpsTask,
+  GeospatialRiskItem,
+  GeospatialRolloutWave,
+  GeospatialValidationResult,
+  GeospatialValidationRun,
+  GeospatialValidationTestcase,
   WarehouseOverviewRow,
 } from "@phil-onion-watch/types";
 
@@ -518,4 +526,79 @@ export async function downloadReportFile(token: string | undefined, reportId: nu
     throw new Error(`Report download failed: ${response.status}`);
   }
   return response.blob();
+}
+
+export function useGeospatialRolloutWaves(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-rollout-waves", token],
+    queryFn: () => apiFetch<GeospatialRolloutWave[]>("/api/v1/geospatial/waves?limit=200", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialKpiScorecards(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-kpi-scorecards", token],
+    queryFn: () => apiFetch<GeospatialKpiScorecard[]>("/api/v1/geospatial/kpi/scorecards?limit=200", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialIncidents(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-incidents", token],
+    queryFn: () => apiFetch<GeospatialIncident[]>("/api/v1/geospatial/incidents?limit=200", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialValidationRuns(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-validation-runs", token],
+    queryFn: () => apiFetch<GeospatialValidationRun[]>("/api/v1/geospatial/validation/runs?limit=200", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialValidationTestcases(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-validation-testcases", token],
+    queryFn: () => apiFetch<GeospatialValidationTestcase[]>("/api/v1/geospatial/validation/testcases", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialValidationResults(token: string | undefined, runId: number | undefined) {
+  return useQuery({
+    queryKey: ["geospatial-validation-results", token, runId],
+    queryFn: () => apiFetch<GeospatialValidationResult[]>(`/api/v1/geospatial/validation/runs/${runId}/results`, { token }),
+    enabled: !!token && typeof runId === "number",
+  });
+}
+
+export function useGeospatialRisks(token?: string) {
+  return useQuery({
+    queryKey: ["geospatial-risk-items", token],
+    queryFn: () => apiFetch<GeospatialRiskItem[]>("/api/v1/geospatial/risks?limit=200", { token }),
+    enabled: !!token,
+  });
+}
+
+export function useGeospatialOpsTasks(token?: string, params?: { status?: string; taskType?: string; limit?: number }) {
+  const search = new URLSearchParams();
+  if (params?.status) {
+    search.set("status", params.status);
+  }
+  if (params?.taskType) {
+    search.set("task_type", params.taskType);
+  }
+  if (params?.limit) {
+    search.set("limit", String(params.limit));
+  }
+  const suffix = search.size > 0 ? `?${search.toString()}` : "";
+  return useQuery({
+    queryKey: ["geospatial-ops-tasks", token, params?.status, params?.taskType, params?.limit],
+    queryFn: () => apiFetch<GeospatialOpsTask[]>(`/api/v1/geospatial/ops/tasks${suffix}`, { token }),
+    enabled: !!token,
+  });
 }

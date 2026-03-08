@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     agency_feed_ingestion_cron: str = "15 */6 * * *"
     geospatial_ingest_cron: str = "0 */12 * * *"
     geospatial_refresh_cron: str = "30 3 * * *"
+    geospatial_kpi_generation_cron: str = "10 4 1 * *"
+    geospatial_risk_review_reminder_cron: str = "0 8 * * *"
+    geospatial_incident_slo_check_cron: str = "*/15 * * * *"
 
     stac_api_url: str = "https://earth-search.aws.element84.com/v1"
     stac_timeout_seconds: float = 20.0

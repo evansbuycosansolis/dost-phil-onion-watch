@@ -17,6 +17,11 @@ from app.services.alert_service import generate_alerts_from_signals
 from app.services.document_ingestion_service import process_pending_document_ingestion_jobs, rebuild_document_index
 from app.services.feed_connector_service import run_all_connector_ingestions
 from app.services.geospatial_feature_service import run_feature_refresh
+from app.services.geospatial_playbooks_service import (
+    run_incident_slo_checks,
+    run_monthly_kpi_scorecard_generation,
+    run_risk_review_reminders,
+)
 from app.services.notification_service import notify_job_failure
 from app.services.observability_service import get_observability_store
 from app.services.report_distribution_service import process_pending_report_deliveries, queue_undistributed_reports
@@ -369,6 +374,92 @@ def _run_geospatial_refresh_job() -> None:
     _run_with_retry("geospatial_refresh", execute, correlation_id=correlation_id)
 
 
+def _run_geospatial_kpi_generation_job() -> None:
+    correlation_id = f"job-geospatial-kpi-generation-{uuid4().hex[:12]}"
+
+    def execute() -> None:
+        db = SessionLocal()
+        job = _record_job_start(db, "geospatial_kpi_generation", correlation_id=correlation_id)
+        try:
+            scorecard = run_monthly_kpi_scorecard_generation(
+                db,
+                reporting_month=date.today().replace(day=1),
+                actor_user_id=None,
+            )
+            _record_job_success(
+                db,
+                job,
+                {
+                    "scorecard_id": scorecard.id,
+                    "period_month": scorecard.period_month.isoformat(),
+                    "computed_status": scorecard.computed_status,
+                },
+            )
+            db.commit()
+        except Exception as exc:
+            _record_job_failure(db, job, str(exc))
+            db.commit()
+            raise
+        finally:
+            db.close()
+
+    _run_with_retry("geospatial_kpi_generation", execute, correlation_id=correlation_id)
+
+
+def _run_geospatial_risk_review_reminder_job() -> None:
+    correlation_id = f"job-geospatial-risk-review-reminder-{uuid4().hex[:12]}"
+
+    def execute() -> None:
+        db = SessionLocal()
+        job = _record_job_start(db, "geospatial_risk_review_reminder", correlation_id=correlation_id)
+        try:
+            tasks = run_risk_review_reminders(db, actor_user_id=None)
+            _record_job_success(
+                db,
+                job,
+                {
+                    "tasks_created": len(tasks),
+                    "task_ids": [row.id for row in tasks],
+                },
+            )
+            db.commit()
+        except Exception as exc:
+            _record_job_failure(db, job, str(exc))
+            db.commit()
+            raise
+        finally:
+            db.close()
+
+    _run_with_retry("geospatial_risk_review_reminder", execute, correlation_id=correlation_id)
+
+
+def _run_geospatial_incident_slo_check_job() -> None:
+    correlation_id = f"job-geospatial-incident-slo-check-{uuid4().hex[:12]}"
+
+    def execute() -> None:
+        db = SessionLocal()
+        job = _record_job_start(db, "geospatial_incident_slo_check", correlation_id=correlation_id)
+        try:
+            tasks = run_incident_slo_checks(db, actor_user_id=None)
+            _record_job_success(
+                db,
+                job,
+                {
+                    "tasks_created": len(tasks),
+                    "task_ids": [row.id for row in tasks],
+                },
+            )
+            db.commit()
+        except Exception as exc:
+            _record_job_failure(db, job, str(exc))
+            db.commit()
+            raise
+        finally:
+            db.close()
+
+    _run_with_retry("geospatial_incident_slo_check", execute, correlation_id=correlation_id)
+
+
 def _cron(expr: str) -> CronTrigger:
     return CronTrigger.from_crontab(expr, timezone=settings.scheduler_timezone)
 
@@ -455,6 +546,30 @@ def create_scheduler() -> BlockingScheduler:
         max_instances=1,
         misfire_grace_time=3600,
     )
+    scheduler.add_job(
+        _run_geospatial_kpi_generation_job,
+        trigger=_cron(settings.geospatial_kpi_generation_cron),
+        id="geospatial_kpi_generation",
+        coalesce=True,
+        max_instances=1,
+        misfire_grace_time=3600,
+    )
+    scheduler.add_job(
+        _run_geospatial_risk_review_reminder_job,
+        trigger=_cron(settings.geospatial_risk_review_reminder_cron),
+        id="geospatial_risk_review_reminder",
+        coalesce=True,
+        max_instances=1,
+        misfire_grace_time=1200,
+    )
+    scheduler.add_job(
+        _run_geospatial_incident_slo_check_job,
+        trigger=_cron(settings.geospatial_incident_slo_check_cron),
+        id="geospatial_incident_slo_check",
+        coalesce=True,
+        max_instances=1,
+        misfire_grace_time=600,
+    )
     return scheduler
 
 
@@ -475,6 +590,9 @@ def main() -> None:
             "observability_monitor_cron": settings.observability_monitor_cron,
             "geospatial_ingest_cron": settings.geospatial_ingest_cron,
             "geospatial_refresh_cron": settings.geospatial_refresh_cron,
+            "geospatial_kpi_generation_cron": settings.geospatial_kpi_generation_cron,
+            "geospatial_risk_review_reminder_cron": settings.geospatial_risk_review_reminder_cron,
+            "geospatial_incident_slo_check_cron": settings.geospatial_incident_slo_check_cron,
             "max_retries": settings.job_max_retries,
         },
     )

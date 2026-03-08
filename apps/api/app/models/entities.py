@@ -371,6 +371,185 @@ class GeospatialFilterPreset(Base, TimestampMixin):
     filters_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
 
 
+class GeospatialRolloutWave(Base, TimestampMixin):
+    __tablename__ = "geospatial_rollout_waves"
+    __table_args__ = (
+        UniqueConstraint("wave_number", "region_scope", name="uq_geospatial_rollout_waves_number_region"),
+        Index("ix_geospatial_rollout_waves_gate_status", "gate_status"),
+        Index("ix_geospatial_rollout_waves_owner", "owner_user_id"),
+        Index("ix_geospatial_rollout_waves_dates", "start_date", "end_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(180), nullable=False)
+    wave_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    region_scope: Mapped[str] = mapped_column(String(180), nullable=False)
+    start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    reviewer_ids_json: Mapped[list[int]] = mapped_column(JSON, default=list, nullable=False)
+    gate_status: Mapped[str] = mapped_column(String(40), default="draft", nullable=False)
+    gate_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pass_fail_criteria_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+
+class GeospatialKpiScorecard(Base, TimestampMixin):
+    __tablename__ = "geospatial_kpi_scorecards"
+    __table_args__ = (
+        UniqueConstraint("period_month", "region_scope", name="uq_geospatial_kpi_scorecards_period_scope"),
+        Index("ix_geospatial_kpi_scorecards_period", "period_month"),
+        Index("ix_geospatial_kpi_scorecards_status", "computed_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    period_month: Mapped[date] = mapped_column(Date, nullable=False)
+    region_scope: Mapped[str] = mapped_column(String(180), nullable=False)
+    metrics_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    thresholds_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    computed_status: Mapped[str] = mapped_column(String(20), default="yellow", nullable=False)
+    source_pointers_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+
+class GeospatialIncident(Base, TimestampMixin):
+    __tablename__ = "geospatial_incidents"
+    __table_args__ = (
+        UniqueConstraint("incident_key", name="uq_geospatial_incidents_incident_key"),
+        Index("ix_geospatial_incidents_severity", "severity"),
+        Index("ix_geospatial_incidents_status", "status"),
+        Index("ix_geospatial_incidents_started_at", "started_at"),
+        Index("ix_geospatial_incidents_assigned_to", "assigned_to_user_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    incident_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    severity: Mapped[str] = mapped_column(String(20), default="SEV3", nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    mitigated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    impact: Mapped[str | None] = mapped_column(Text, nullable=True)
+    root_cause: Mapped[str | None] = mapped_column(Text, nullable=True)
+    corrective_actions_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    evidence_pack_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    comms_log_json: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    created_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    slo_target_minutes: Mapped[int] = mapped_column(Integer, default=240, nullable=False)
+    postmortem_completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class GeospatialValidationRun(Base, TimestampMixin):
+    __tablename__ = "geospatial_validation_runs"
+    __table_args__ = (
+        UniqueConstraint("run_key", name="uq_geospatial_validation_runs_run_key"),
+        Index("ix_geospatial_validation_runs_status", "status"),
+        Index("ix_geospatial_validation_runs_scope", "scope"),
+        Index("ix_geospatial_validation_runs_signoff", "signoff_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_key: Mapped[str] = mapped_column(String(80), nullable=False)
+    scope: Mapped[str] = mapped_column(String(180), nullable=False)
+    model_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    threshold_set_version: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    status: Mapped[str] = mapped_column(String(40), default="planned", nullable=False)
+    executed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    reviewed_by_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    signoff_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    results_summary_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    evidence_links_json: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+
+
+class GeospatialValidationTestcase(Base, TimestampMixin):
+    __tablename__ = "geospatial_validation_testcases"
+    __table_args__ = (
+        UniqueConstraint("code", name="uq_geospatial_validation_testcases_code"),
+        Index("ix_geospatial_validation_testcases_category", "category"),
+        Index("ix_geospatial_validation_testcases_active", "is_active"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(20), nullable=False)
+    name: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    expected: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(40), nullable=False)
+    category: Mapped[str] = mapped_column(String(80), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class GeospatialValidationResult(Base, TimestampMixin):
+    __tablename__ = "geospatial_validation_results"
+    __table_args__ = (
+        UniqueConstraint("run_id", "testcase_id", name="uq_geospatial_validation_results_run_case"),
+        Index("ix_geospatial_validation_results_status", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    run_id: Mapped[int] = mapped_column(ForeignKey("geospatial_validation_runs.id"), nullable=False, index=True)
+    testcase_id: Mapped[int] = mapped_column(ForeignKey("geospatial_validation_testcases.id"), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(20), default="skip", nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    evidence_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    executed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class GeospatialRiskItem(Base, TimestampMixin):
+    __tablename__ = "geospatial_risk_items"
+    __table_args__ = (
+        UniqueConstraint("risk_key", name="uq_geospatial_risk_items_risk_key"),
+        Index("ix_geospatial_risk_items_status", "status"),
+        Index("ix_geospatial_risk_items_owner", "owner_user_id"),
+        Index("ix_geospatial_risk_items_next_review", "next_review_date"),
+        Index("ix_geospatial_risk_items_target_close", "target_close_date"),
+        Index("ix_geospatial_risk_items_escalation", "escalation_level"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    risk_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    likelihood: Mapped[int] = mapped_column(Integer, nullable=False)
+    impact: Mapped[int] = mapped_column(Integer, nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    trigger: Mapped[str | None] = mapped_column(Text, nullable=True)
+    mitigation: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False)
+    next_review_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    target_close_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    escalation_level: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    board_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+
+
+class GeospatialOpsTask(Base, TimestampMixin):
+    __tablename__ = "geospatial_ops_tasks"
+    __table_args__ = (
+        Index("ix_geospatial_ops_tasks_status_due", "status", "due_at"),
+        Index("ix_geospatial_ops_tasks_type", "task_type"),
+        Index("ix_geospatial_ops_tasks_assignee", "assigned_to_user_id"),
+        Index("ix_geospatial_ops_tasks_related", "related_entity_type", "related_entity_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    task_type: Mapped[str] = mapped_column(String(80), nullable=False)
+    title: Mapped[str] = mapped_column(String(180), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="open", nullable=False)
+    priority: Mapped[str] = mapped_column(String(20), default="medium", nullable=False)
+    due_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    assigned_to_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    related_entity_type: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    related_entity_id: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    notification_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
 class Warehouse(Base, TimestampMixin):
     __tablename__ = "warehouses"
 
