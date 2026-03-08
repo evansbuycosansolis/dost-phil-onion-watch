@@ -1840,6 +1840,39 @@ def test_geospatial_playbooks_incident_validation_and_risk_lifecycle(client, aut
     assert slo_checks.status_code == 200
 
 
+def test_geospatial_kpi_monthly_automation_returns_traceability_and_artifacts(client, auth_headers):
+    reporting_month = date.today().replace(day=1).isoformat()
+    response = client.post(
+        f"/api/v1/geospatial/automation/monthly-kpi?reporting_month={reporting_month}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    source_pointers = payload.get("source_pointers") or {}
+    traceability = source_pointers.get("traceability") or {}
+    source_counts = traceability.get("source_counts") or {}
+    supporting_links = traceability.get("supporting_links") or {}
+    artifacts = source_pointers.get("artifacts") or {}
+
+    assert payload["computed_status"] in {"green", "yellow", "red"}
+    assert isinstance(source_counts, dict)
+    assert isinstance(supporting_links, dict)
+    assert "incidents" in supporting_links
+    assert "workflows" in supporting_links
+    assert "deliveries" in supporting_links
+    assert "audit" in supporting_links
+    assert artifacts.get("scorecard_csv")
+    assert artifacts.get("variance_notes")
+    assert artifacts.get("action_summary")
+
+    tasks = client.get("/api/v1/geospatial/ops/tasks?task_type=kpi_scorecard_review&limit=200", headers=auth_headers)
+    assert tasks.status_code == 200
+    assert any(
+        row["related_entity_type"] == "geospatial_kpi_scorecard" and row["related_entity_id"] == str(payload["id"])
+        for row in tasks.json()
+    )
+
+
 def test_openapi_contains_tag_examples_and_router_responses(client):
     response = client.get("/openapi.json")
     assert response.status_code == 200

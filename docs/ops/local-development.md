@@ -73,3 +73,19 @@ Default password for seeded accounts: `ChangeMe123!`
 
 - Default feed fixture directory: `data/fixtures/feeds`
 - Configure with `AGENCY_FEED_FIXTURES_PATH` in `apps/api/.env`.
+
+## Geospatial operations references
+
+- Playbooks:
+  - `docs/roadmap/geospatial-rollout-plan.md`
+  - `docs/roadmap/geospatial-kpi-scorecard.md`
+  - `docs/ops/geospatial-incident-runbook.md`
+  - `docs/governance/geospatial-validation-and-assurance.md`
+  - `docs/governance/geospatial-risk-register.md`
+- Operator guide: `docs/ops/geospatial-operator-guide.md`
+- Web screens:
+  - `/dashboard/ops/geospatial/rollout`
+  - `/dashboard/ops/geospatial/kpi`
+  - `/dashboard/ops/geospatial/incidents`
+  - `/dashboard/ops/geospatial/validation`
+  - `/dashboard/ops/geospatial/risks`

@@ -48,3 +48,11 @@ The baseline is structured for:
 Phil Onion Watch includes an AOI-first geospatial surveillance design that ingests multi-source remote sensing observations (Sentinel-2, Sentinel-1, HLS, Landsat, MODIS) and converts them into auditable AOI-level features for dashboards and intelligence services.
 
 See [docs/architecture/geospatial-surveillance.md](geospatial-surveillance.md).
+
+Operational playbooks and governance controls:
+
+- [docs/roadmap/geospatial-rollout-plan.md](../roadmap/geospatial-rollout-plan.md)
+- [docs/roadmap/geospatial-kpi-scorecard.md](../roadmap/geospatial-kpi-scorecard.md)
+- [docs/ops/geospatial-incident-runbook.md](../ops/geospatial-incident-runbook.md)
+- [docs/governance/geospatial-validation-and-assurance.md](../governance/geospatial-validation-and-assurance.md)
+- [docs/governance/geospatial-risk-register.md](../governance/geospatial-risk-register.md)

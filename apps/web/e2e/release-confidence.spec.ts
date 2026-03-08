@@ -164,3 +164,28 @@ test("reports page supports CSV and PDF export flow", async ({ page }) => {
   expect(pdfResponse.status()).toBe(200);
   expect(pdfResponse.headers()["content-type"] ?? "").toContain("application/pdf");
 });
+
+test("geo ops monthly KPI automation computes status and creates review task", async ({ page }) => {
+  await loginAs(page, "super_admin@onionwatch.ph");
+  await page.getByRole("link", { name: "Geo Ops", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/ops\/geospatial\/rollout$/);
+  await page.getByRole("link", { name: "KPI Scorecards", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard\/ops\/geospatial\/kpi$/);
+  await expect(page.getByRole("heading", { name: "Geospatial KPI Scorecards" })).toBeVisible();
+
+  const token = await page.evaluate(() => window.localStorage.getItem("pow_token"));
+  expect(token).toBeTruthy();
+  const periodMonth = await page.getByLabel("Period Month").inputValue();
+  const automationResponse = await page.request.post(`${API_BASE_URL}/api/v1/geospatial/automation/monthly-kpi?reporting_month=${periodMonth}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  expect(automationResponse.status()).toBe(200);
+  const automationPayload = await automationResponse.json();
+  expect(["green", "yellow", "red"]).toContain(automationPayload.computed_status);
+
+  await page.reload();
+  await expect(page.getByText("Overall Status")).toBeVisible();
+  await expect(page.getByText("Review geospatial KPI scorecard")).toBeVisible();
+});

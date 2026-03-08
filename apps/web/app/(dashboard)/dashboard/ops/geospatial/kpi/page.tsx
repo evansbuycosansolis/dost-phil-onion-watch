@@ -17,6 +17,20 @@ function statusClass(status: string) {
   return "bg-slate-100 text-slate-700";
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((row): row is string => typeof row === "string" && row.length > 0);
+}
+
 export default function GeospatialKpiPage() {
   const { token } = useAuth();
   const queryClient = useQueryClient();
@@ -70,6 +84,25 @@ export default function GeospatialKpiPage() {
       yellow: values.filter((value) => value === "yellow").length,
       red: values.filter((value) => value === "red").length,
     };
+  }, [detailQuery.data?.source_pointers]);
+
+  const traceability = useMemo(() => {
+    const sourcePointers = toRecord(detailQuery.data?.source_pointers);
+    const traceabilityPayload = toRecord(sourcePointers.traceability);
+    const sourceCounts = Object.entries(toRecord(traceabilityPayload.source_counts))
+      .filter(([, value]) => typeof value === "number")
+      .map(([metric, count]) => ({ metric, count: Number(count) }))
+      .sort((left, right) => right.count - left.count);
+    const supportingLinksPayload = toRecord(traceabilityPayload.supporting_links);
+    const supportingLinks = {
+      incidents: toStringArray(supportingLinksPayload.incidents),
+      workflows: toStringArray(supportingLinksPayload.workflows),
+      deliveries: toStringArray(supportingLinksPayload.deliveries),
+      reports: toStringArray(supportingLinksPayload.reports),
+      audit: toStringArray(supportingLinksPayload.audit),
+    };
+    const artifacts = toRecord(sourcePointers.artifacts);
+    return { sourceCounts, supportingLinks, artifacts };
   }, [detailQuery.data?.source_pointers]);
 
   const createMutation = useMutation({
@@ -216,6 +249,57 @@ export default function GeospatialKpiPage() {
           <button className="rounded bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-500" type="button" onClick={() => monthlyAutomationMutation.mutate()} disabled={monthlyAutomationMutation.isPending}>
             Run monthly automation
           </button>
+        </div>
+      </SectionShell>
+
+      <SectionShell title="KPI Traceability">
+        {traceability.sourceCounts.length === 0 ? (
+          <p className="text-sm text-slate-500">No traceability source counts were generated yet for this scorecard.</p>
+        ) : (
+          <DataTable
+            columns={[
+              { key: "metric", label: "Source Metric" },
+              { key: "count", label: "Count" },
+            ]}
+            rows={traceability.sourceCounts}
+          />
+        )}
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {Object.entries(traceability.supportingLinks).map(([group, links]) => (
+            <div key={group} className="rounded border border-slate-200 p-3">
+              <h3 className="text-sm font-semibold capitalize text-slate-700">{group} evidence</h3>
+              {links.length === 0 ? (
+                <p className="mt-1 text-xs text-slate-500">No supporting links for this group.</p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {links.slice(0, 8).map((link) => (
+                    <li key={link}>
+                      <a className="text-xs text-sky-700 hover:underline" href={link} target="_blank" rel="noreferrer">
+                        {link}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded border border-slate-200 p-3">
+          <h3 className="text-sm font-semibold text-slate-700">Generated monthly artifacts</h3>
+          {Object.keys(traceability.artifacts).length === 0 ? (
+            <p className="mt-1 text-xs text-slate-500">No automation artifacts are linked for this scorecard.</p>
+          ) : (
+            <div className="mt-2 space-y-1 text-xs text-slate-600">
+              {Object.entries(traceability.artifacts).map(([key, value]) => (
+                <div key={key}>
+                  <span className="font-medium">{key}: </span>
+                  <span>{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </SectionShell>
 

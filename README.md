@@ -163,6 +163,17 @@ Reports API now supports export metadata and downloadable artifacts:
 - `GET /api/v1/reports/{report_id}/download/csv`
 - `GET /api/v1/reports/{report_id}/download/pdf`
 
+## Geospatial Ops and Governance Playbooks
+
+Execution docs for rollout, KPI, incidents, validation, and risk governance:
+
+- [Geospatial Rollout Plan](docs/roadmap/geospatial-rollout-plan.md)
+- [Geospatial KPI Scorecard](docs/roadmap/geospatial-kpi-scorecard.md)
+- [Geospatial Incident Runbook](docs/ops/geospatial-incident-runbook.md)
+- [Geospatial Validation and Assurance](docs/governance/geospatial-validation-and-assurance.md)
+- [Geospatial Risk Register](docs/governance/geospatial-risk-register.md)
+- [Geospatial Operator Guide](docs/ops/geospatial-operator-guide.md)
+
 ## Mobile submission sync contract
 
 Municipal/mobile clients can sync batched submissions through:
