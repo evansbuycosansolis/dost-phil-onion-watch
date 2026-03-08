@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AOICreateRequest(BaseModel):
@@ -297,6 +297,8 @@ class RunReproducibilityResponse(BaseModel):
 
 
 class GeospatialExecutiveDashboardResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     as_of: str
     totals: dict[str, Any]
     monthly_run_trend: list[dict[str, Any]]

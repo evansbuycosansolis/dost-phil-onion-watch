@@ -82,6 +82,7 @@ from app.schemas.geospatial import (
     RunScheduleDTO,
 )
 from app.services.audit_service import build_structured_diff, emit_audit_event
+from app.services.geospatial_capability_catalog_service import inject_catalog_capabilities
 from app.services.geospatial_feature_service import execute_feature_refresh_run, queue_feature_refresh_run
 from app.services.satellite_ingestion_service import execute_ingestion_run, queue_ingestion_run
 from app.services.stac_service import geojson_to_bbox
@@ -4121,9 +4122,9 @@ def geospatial_executive_dashboard(
 
     total_aois = len(aoi_map)
 
-    return GeospatialExecutiveDashboardResponse(
-        as_of=now.isoformat(),
-        totals={
+    payload: dict[str, Any] = {
+        "as_of": now.isoformat(),
+        "totals": {
             "total_aois": total_aois,
             "active_aois": active_aois,
             "watchlist_aois": watchlist_count,
@@ -4134,19 +4135,25 @@ def geospatial_executive_dashboard(
             "stale_aois": stale_aoi_count,
             "high_risk_aois": high_risk_aoi_count,
         },
-        monthly_run_trend=monthly_run_trend,
-        top_anomaly_aois=top_anomaly_aois,
-        source_reliability=source_reliability[:12],
-        executive_municipality_summary_board=municipality_summary_rows[:12],
-        executive_top_risk_aoi_digest=top_risk_digest,
-        executive_supply_impact_estimator={
+        "monthly_run_trend": monthly_run_trend,
+        "top_anomaly_aois": top_anomaly_aois,
+        "source_reliability": source_reliability[:12],
+        "executive_municipality_summary_board": municipality_summary_rows[:12],
+        "executive_top_risk_aoi_digest": top_risk_digest,
+        "executive_supply_impact_estimator": {
             "score": supply_impact_score,
             "high_risk_aoi_count": high_risk_aoi_count,
             "warehouse_stock_tons_30d": round(warehouse_stock_total, 4),
             "import_volume_tons_30d": round(import_volume_total, 4),
         },
-        executive_intervention_planning_board=intervention_planning_board,
+        "executive_intervention_planning_board": intervention_planning_board,
+    }
+    payload = inject_catalog_capabilities(
+        payload,
+        prefix="executive",
+        context={"scope": "dashboard", "generated_at": now.isoformat()},
     )
+    return GeospatialExecutiveDashboardResponse.model_validate(payload)
 
 
 def _executive_anomaly_brief_payload(db: Session, *, now: datetime) -> dict[str, Any]:
@@ -4591,7 +4598,7 @@ def _aoi_surveillance_payload(db: Session, *, aoi: GeospatialAOI) -> dict[str, A
     if not recommendation_actions:
         recommendation_actions.append("Continue routine monitoring and weekly analyst verification.")
 
-    return {
+    payload: dict[str, Any] = {
         "aoi_id": aoi.id,
         "aoi_code": aoi.code,
         "generated_at": now.isoformat(),
@@ -4690,6 +4697,11 @@ def _aoi_surveillance_payload(db: Session, *, aoi: GeospatialAOI) -> dict[str, A
         ],
         "aoi_crop_calendar_overlay": crop_calendar,
     }
+    return inject_catalog_capabilities(
+        payload,
+        prefix="aoi",
+        context={"surface": "surveillance", "aoi_id": aoi.id},
+    )
 
 
 def _load_aoi_operations_state(db: Session, *, aoi_id: int) -> tuple[GeospatialAOIMetadata, dict[str, Any]]:
@@ -4829,7 +4841,7 @@ def _aoi_operations_payload(db: Session, *, aoi: GeospatialAOI, actor_user_id: i
         "verified_at": now.isoformat(),
     }
 
-    return {
+    payload: dict[str, Any] = {
         "aoi_id": aoi.id,
         "generated_at": now.isoformat(),
         "aoi_false_positive_review_workflow": {"pending_count": sum(1 for row in false_positive_reviews if row.get("status") == "pending"), "recent_reviews": false_positive_reviews[-12:]},
@@ -4875,6 +4887,11 @@ def _aoi_operations_payload(db: Session, *, aoi: GeospatialAOI, actor_user_id: i
         "aoi_signed_summary_verification": signed_summary,
         "aoi_qr_coded_printable_report": qr_payload,
     }
+    return inject_catalog_capabilities(
+        payload,
+        prefix="aoi",
+        context={"surface": "operations", "aoi_id": aoi.id, "actor_user_id": actor_user_id},
+    )
 
 
 def _multi_aoi_payload(db: Session, *, payload: dict[str, Any]) -> dict[str, Any]:
@@ -5217,12 +5234,13 @@ def _run_chain_of_custody_timeline(db: Session, *, run: SatellitePipelineRun, li
     timeline.sort(key=lambda row: str(row.get("timestamp") or ""))
     if len(timeline) > limit:
         timeline = timeline[-limit:]
-    return {
+    payload: dict[str, Any] = {
         "run_id": run.id,
         "generated_at": datetime.utcnow().isoformat(),
         "event_count": len(timeline),
         "events": timeline,
     }
+    return payload
 
 
 def _scene_provenance_chain_payload(
@@ -5378,7 +5396,7 @@ def _run_command_center_payload(db: Session, *, run: SatellitePipelineRun) -> di
     scenario_ops.setdefault("synthetic_test_mode", {"enabled": False, "dataset": None})
     scenario_ops.setdefault("red_team_anomaly_injection", {"enabled": False, "last_injected_at": None})
 
-    return {
+    payload: dict[str, Any] = {
         "run_id": run.id,
         "generated_at": now.isoformat(),
         "run_signed_export_package": {"signature": signed_export_signature, "signed_at": now.isoformat(), "artifact_count": len(_run_artifact_manifest_payload(db, run=run).get("artifacts", []))},
@@ -5443,6 +5461,11 @@ def _run_command_center_payload(db: Session, *, run: SatellitePipelineRun) -> di
         "run_synthetic_test_data_mode": scenario_ops.get("synthetic_test_mode"),
         "run_red_team_anomaly_injection": scenario_ops.get("red_team_anomaly_injection"),
     }
+    return inject_catalog_capabilities(
+        payload,
+        prefix="run",
+        context={"run_id": run.id, "run_type": run.run_type},
+    )
 
 
 def _scene_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> dict[str, Any]:
@@ -5560,7 +5583,12 @@ def _scene_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> di
             }
         )
 
-    return {"run_id": run.id, "generated_at": datetime.utcnow().isoformat(), "scene_count": len(rows), "rows": rows[:200]}
+    payload = {"run_id": run.id, "generated_at": datetime.utcnow().isoformat(), "scene_count": len(rows), "rows": rows[:200]}
+    return inject_catalog_capabilities(
+        payload,
+        prefix="scene",
+        context={"run_id": run.id, "scene_count": len(rows)},
+    )
 
 
 def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> dict[str, Any]:
@@ -5726,7 +5754,7 @@ def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> 
         status = str(row.get("feature_review_status") or "pending")
         review_counts[status] = review_counts.get(status, 0) + 1
 
-    return {
+    payload: dict[str, Any] = {
         "run_id": run.id,
         "generated_at": datetime.utcnow().isoformat(),
         "feature_spatial_clustering_panel": spatial_panel[:20],
@@ -5761,6 +5789,11 @@ def _feature_intelligence_payload(db: Session, *, run: SatellitePipelineRun) -> 
         "feature_confidence_recalibration_tool": [row["feature_confidence_recalibration_tool"] for row in rows[:20]],
         "rows": rows[:250],
     }
+    return inject_catalog_capabilities(
+        payload,
+        prefix="feature",
+        context={"run_id": run.id, "feature_count": len(rows)},
+    )
 
 
 def _geospatial_operations_center_payload(db: Session) -> dict[str, Any]:
@@ -5827,7 +5860,7 @@ def _geospatial_operations_center_payload(db: Session) -> dict[str, Any]:
         {"name": "active_run_schedule_exists", "passed": len(drift_rows) > 0},
     ]
 
-    return {
+    payload: dict[str, Any] = {
         "generated_at": now.isoformat(),
         "geospatial_notification_center": {
             "total_open": len(open_alerts),
@@ -5868,6 +5901,11 @@ def _geospatial_operations_center_payload(db: Session) -> dict[str, Any]:
         "geospatial_deployment_guardrail_checks": guardrail_checks,
         "geospatial_configuration_drift_alert": config_drift_alert,
     }
+    return inject_catalog_capabilities(
+        payload,
+        prefix="geospatial",
+        context={"open_alerts": len(open_alerts), "run_rows": len(run_rows)},
+    )
 
 
 def _config_health_payload(db: Session) -> dict[str, Any]:

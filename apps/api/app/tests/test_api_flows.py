@@ -642,6 +642,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert executive_dashboard.status_code == 200
     assert "totals" in executive_dashboard.json()
     assert "monthly_run_trend" in executive_dashboard.json()
+    assert executive_dashboard.json()["executive_catalog_coverage"]["fully_covered"] is True
 
     surveillance = client.get(f"/api/v1/geospatial/aois/{aoi_id}/surveillance/overview", headers=auth_headers)
     assert surveillance.status_code == 200
@@ -653,6 +654,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "aoi_intervention_recommendation_engine" in surveillance_payload
     assert "aoi_market_price_correlation_panel" in surveillance_payload
     assert "aoi_crop_calendar_overlay" in surveillance_payload
+    assert surveillance_payload["aoi_catalog_coverage"]["fully_covered"] is True
 
     aoi_ops = client.get(f"/api/v1/geospatial/aois/{aoi_id}/operations/overview", headers=auth_headers)
     assert aoi_ops.status_code == 200
@@ -662,6 +664,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "aoi_parcel_subdivision_support" in aoi_ops.json()
     assert "aoi_confidence_waiver_workflow" in aoi_ops.json()
     assert "aoi_local_language_summary_export" in aoi_ops.json()
+    assert aoi_ops.json()["aoi_catalog_coverage"]["fully_covered"] is True
 
     review_update = client.post(
         f"/api/v1/geospatial/aois/{aoi_id}/operations/review",
@@ -765,6 +768,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "run_artifact_retention_policy" in run_ops_payload
     assert "run_decision_log" in run_ops_payload
     assert "run_scenario_replay" in run_ops_payload
+    assert run_ops_payload["run_catalog_coverage"]["fully_covered"] is True
 
     approval_gate_status = client.get(f"/api/v1/geospatial/runs/{run_id}/operations/approval-gate", headers=auth_headers)
     assert approval_gate_status.status_code == 200
@@ -854,6 +858,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert scene_intel.status_code == 200
     scene_payload = scene_intel.json()
     assert "rows" in scene_payload
+    assert scene_payload["scene_catalog_coverage"]["fully_covered"] is True
     if scene_payload["rows"]:
         first_scene = scene_payload["rows"][0]
         assert "scene_provenance_chain_viewer" in first_scene
@@ -875,6 +880,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "feature_cross_source_consensus_score_panel" in feature_payload
     assert "feature_threshold_what_if_simulator" in feature_payload
     assert "feature_review_sla_timer_panel" in feature_payload
+    assert feature_payload["feature_catalog_coverage"]["fully_covered"] is True
     if feature_payload["rows"]:
         assert "feature_cross_source_consensus_score" in feature_payload["rows"][0]
         assert "feature_human_review_priority_score" in feature_payload["rows"][0]
@@ -925,6 +931,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert ops_center.status_code == 200
     assert "geospatial_notification_center" in ops_center.json()
     assert "geospatial_configuration_drift_alert" in ops_center.json()
+    assert ops_center.json()["geospatial_catalog_coverage"]["fully_covered"] is True
 
     config_health = client.get("/api/v1/geospatial/dashboard/config-health", headers=auth_headers)
     assert config_health.status_code == 200
