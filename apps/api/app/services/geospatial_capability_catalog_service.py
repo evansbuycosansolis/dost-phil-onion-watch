@@ -7,7 +7,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-CHECKLIST_PATTERN = re.compile(r"^- \[(?: |x|X)\] (?P<label>.+?)\s*$")
+CHECKLIST_PATTERN = re.compile(r"^- \[(?P<state> |x|X)\] (?P<label>.+?)\s*$")
+TIER_PATTERN = re.compile(r"^###\s+(P[0-2])\b", re.IGNORECASE)
+CATEGORY_PATTERN = re.compile(r"^####\s+(?P<category>.+?)\s*$")
 SUPPORTED_PREFIXES = ("aoi", "geospatial", "run", "scene", "feature", "executive")
 
 
@@ -24,33 +26,54 @@ def _slugify(value: str) -> str:
 def _label_to_key(label: str) -> tuple[str, str]:
     parts = label.strip().split(maxsplit=1)
     if not parts:
-        return "misc", "misc_feature"
+        return "geospatial", "geospatial_misc_feature"
     first = _slugify(parts[0])
     if first not in SUPPORTED_PREFIXES:
-        return "misc", _slugify(label)
+        return "geospatial", f"geospatial_{_slugify(label)}"
     rest = _slugify(parts[1] if len(parts) > 1 else "feature")
     return first, f"{first}_{rest}"
 
 
-def _parse_lines(markdown: str) -> list[dict[str, str]]:
-    rows: list[dict[str, str]] = []
+def _parse_lines(markdown: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    current_tier: str | None = None
+    current_category: str | None = None
     for line in markdown.splitlines():
+        tier_match = TIER_PATTERN.match(line.strip())
+        if tier_match:
+            current_tier = tier_match.group(1).upper()
+            current_category = None
+            continue
+        category_match = CATEGORY_PATTERN.match(line.strip())
+        if category_match:
+            current_category = category_match.group("category").strip()
+            continue
         match = CHECKLIST_PATTERN.match(line)
         if not match:
             continue
         label = match.group("label").strip()
+        checked = match.group("state").lower() == "x"
         prefix, key = _label_to_key(label)
-        rows.append({"label": label, "prefix": prefix, "key": key})
+        rows.append(
+            {
+                "label": label,
+                "prefix": prefix,
+                "key": key,
+                "checked": checked,
+                "tier": current_tier,
+                "category": current_category,
+            }
+        )
     return rows
 
 
 @lru_cache(maxsize=1)
-def get_capability_catalog() -> dict[str, list[dict[str, str]]]:
+def get_capability_catalog() -> dict[str, list[dict[str, Any]]]:
     path = _backlog_path()
     if not path.exists():
         return {prefix: [] for prefix in SUPPORTED_PREFIXES}
     rows = _parse_lines(path.read_text(encoding="utf-8"))
-    grouped: dict[str, list[dict[str, str]]] = {prefix: [] for prefix in SUPPORTED_PREFIXES}
+    grouped: dict[str, list[dict[str, Any]]] = {prefix: [] for prefix in SUPPORTED_PREFIXES}
     seen: dict[str, set[str]] = {prefix: set() for prefix in SUPPORTED_PREFIXES}
     for row in rows:
         prefix = row["prefix"]
@@ -62,6 +85,17 @@ def get_capability_catalog() -> dict[str, list[dict[str, str]]]:
         seen[prefix].add(key)
         grouped[prefix].append(row)
     return grouped
+
+
+def get_prioritized_gap_items(*, unchecked_only: bool = False) -> list[dict[str, Any]]:
+    path = _backlog_path()
+    if not path.exists():
+        return []
+    rows = _parse_lines(path.read_text(encoding="utf-8"))
+    filtered = [row for row in rows if row.get("tier") in {"P0", "P1", "P2"}]
+    if unchecked_only:
+        filtered = [row for row in filtered if not bool(row.get("checked"))]
+    return filtered
 
 
 def _deterministic_score(key: str) -> float:
@@ -119,4 +153,3 @@ def inject_catalog_capabilities(payload: dict[str, Any], *, prefix: str, context
         "fully_covered": len(items) <= len([key for key in payload.keys() if key.startswith(f"{prefix}_")]),
     }
     return payload
-

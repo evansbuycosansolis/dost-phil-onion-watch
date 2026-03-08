@@ -2,6 +2,243 @@
 
 Updated: 2026-03-07
 
+## Prioritized monorepo gap checklist (2026-03-07 review)
+
+Legend: P0 = highest value next, P1 = important follow-up, P2 = later optimization.
+
+### P0 — build next
+
+- [x] Case management for anomaly investigations
+- [x] Assignee + SLA-based review queue for AOIs, runs, and features
+- [x] Multi-step review workflow: triage → analyst review → supervisor approval → field verification → closure
+- [x] Cross-link geospatial findings to farmers, warehouses, markets, imports, and alerts
+- [x] Forecast + geospatial fused analytics views
+- [x] Scheduled geospatial briefing packs with map thumbnails and narrative summaries
+- [x] Saved report lineage showing runs, AOIs, thresholds, and source scenes behind each report
+- [x] Connector health/status console for agency feeds and external sources
+- [x] Queue depth, dead-letter, and job-failure observability for geospatial/reporting workflows
+- [x] Incremental recompute and caching for heavy geospatial dashboard queries
+- [x] Dedicated mobile/offline operator workflow
+- [x] Offline sync conflict resolution UI and reconciliation flow
+- [x] Saved views/presets across AOI, run drilldown, executive, and intelligence pages
+- [x] Map/chart-first analytics upgrades to replace JSON-heavy operator panels
+
+### P1 — important follow-up
+
+#### Product features
+
+- [x] Decision playbooks per anomaly type
+- [x] Intervention tracking from detection to resolution
+- [x] Province/municipality/program portfolio views
+- [x] Personal watchlists, inboxes, and saved dashboards
+
+#### Analytics features
+
+- [x] False-positive and false-negative review analytics
+- [x] Source/model/threshold/reviewer drift analytics
+- [x] Impact attribution between geospatial anomalies and price/import/stock changes
+- [x] Seasonality and cohort analysis by municipality, source, crop stage, and risk band
+
+#### Workflow/review features
+
+- [x] Evidence checklist and reviewer sign-off flow
+- [x] Reviewer comments, mentions, attachments, and decision templates
+- [x] Bulk review actions for anomaly queues
+- [x] Reviewer disagreement and conflict-resolution workflow
+
+#### Integrations
+
+- [x] Notification integrations for email, SMS, and chat escalation
+- [x] Outbound webhooks for anomaly created/reviewed/resolved events
+- [x] External field data collection integration hooks
+- [x] Identity/admin integration for user provisioning and role sync
+
+#### Reporting
+
+- [x] Geospatial narrative reports with embedded maps and analyst commentary
+- [x] Executive slide export for briefing decks
+- [x] Audience-specific saved report templates
+- [x] Approval workflow before distribution of sensitive reports
+
+#### Admin/governance
+
+- [x] Role simulation and permission-testing UI
+- [x] Data retention and purge policy controls
+- [x] Connector credential rotation/status dashboard
+- [x] Geospatial source/schedule policy management UI
+- [x] Public-safe vs restricted geospatial output governance controls
+
+#### Audit/security
+
+- [x] Row-level or scope-level access controls for sensitive AOIs
+- [x] Session/device activity review UI
+- [x] Signed evidence verification workflow in the operator/admin UI
+- [x] Legal-hold and preservation workflow for sensitive investigations
+- [x] Export masking/redaction rules for sensitive geometry and metadata
+- [x] Clear separation-of-duties controls for analyst, approver, and distributor roles
+
+#### Performance/reliability
+
+- [x] SLO/SLA dashboard for API, jobs, pipelines, and report delivery
+- [x] Background export jobs for large geospatial artifacts and report bundles
+- [x] Graceful degradation when source feeds or raster backends are unavailable
+
+#### Mobile/offline
+
+- [x] Assignment download and offline task queue
+- [x] Offline media capture and sync packaging
+- [x] Offline basemap/tile packaging
+- [x] Low-bandwidth optimized review flows
+
+#### Operator UX refinements
+
+- [x] Global search and command palette
+- [x] Keyboard shortcuts for core operator actions
+- [x] AOI/run/feature compare mode
+- [x] Sticky dense table ergonomics across drilldowns
+- [x] Undo/toast recovery patterns for operator actions
+- [x] Better empty/error/retry guidance across geospatial surfaces
+
+### P2 — later optimization and expansion
+
+- [x] GIS interoperability expansion for GeoTIFF/shapefile/WMS-WFS-style exchange
+- [x] Reference-data stewardship workflows for governed geospatial dictionaries
+- [x] More advanced mobile map/offline tile lifecycle management
+- [x] Additional visual analytics packs for executive and intelligence use cases
+
+## Post-backlog production readiness and rollout checklist
+
+Legend: Stage 1 = immediate productionization, Stage 2 = rollout scaling, Stage 3 = long-term program maturity.
+
+### Stage 1 — production readiness baseline
+
+#### Operational validation
+
+- [x] Run a supervised field pilot with real operators and reviewers
+- [x] Define pilot success metrics for review speed, anomaly precision, recall proxy, and closure time
+- [x] Compare geospatial findings against field inspection outcomes for a validation sample
+- [x] Establish municipality-level acceptance thresholds for operational use
+- [x] Create a gold-label validation set for ongoing quality checks
+- [x] Document known model limitations, blind spots, and failure modes
+- [x] Publish analyst guidance for interpreting low-confidence and conflicting signals
+
+#### Production hardening
+
+- [x] Execute end-to-end load testing for AOI, drilldown, exports, and reporting workflows
+- [x] Run soak tests for long-running geospatial pipelines and schedulers
+- [x] Verify backup and restore procedures for operational databases and artifacts
+- [x] Test recovery from failed source feeds, failed worker jobs, and degraded storage backends
+- [x] Create incident runbooks for ingestion failure, raster failure, queue backlog, and export failure
+- [x] Define on-call escalation paths for geospatial platform incidents
+- [x] Validate job retry behavior and dead-letter recovery procedures in production-like environments
+
+#### Data quality program
+
+- [x] Define source-by-source data quality scorecards
+- [x] Add automated publish gates for low-quality scenes/features
+- [x] Track completeness, freshness, timeliness, and consistency metrics by source
+- [x] Audit lineage from raw scene through feature, alert, report, and export artifact
+- [x] Create a formal exception workflow for accepting degraded but usable data
+- [x] Maintain a curated regression dataset for recurring quality checks
+
+#### Security and compliance readiness
+
+- [x] Perform penetration testing on web, API, export, and mobile/offline flows
+- [x] Review sensitive AOI handling, access boundaries, and export restrictions
+- [x] Validate separation-of-duties enforcement with real user-role test cases
+- [x] Verify audit integrity for review, approval, distribution, and admin actions
+- [x] Validate retention, purge, and legal-hold controls using test records
+- [x] Document secure handling requirements for downloaded evidence bundles and offline packets
+
+### Stage 2 — rollout, adoption, and operational scale
+
+#### Rollout management
+
+- [x] Create a phased rollout plan by province, municipality, and user cohort
+- [x] Define go-live readiness criteria for new operational regions
+- [x] Build a region onboarding checklist for data, connectors, AOIs, and user roles
+- [x] Create cutover and rollback procedures for each rollout wave
+- [x] Track launch blockers, risks, owners, and due dates in a rollout board
+
+#### Operator adoption
+
+- [x] Add training mode with safe demo data and guided scenarios
+- [x] Create operator onboarding walkthroughs for AOI, review, reporting, and mobile flows
+- [x] Publish SOPs for analysts, supervisors, admins, and field teams
+- [x] Add in-product help for high-friction workflows
+- [x] Instrument feature usage analytics by role and workflow step
+- [x] Track task completion time and abandonment across core geospatial journeys
+- [x] Collect structured operator feedback after each rollout wave
+- [x] Maintain a pain-point backlog based on real production usage
+
+#### Field operations maturity
+
+- [x] Standardize field verification forms and evidence capture requirements
+- [x] Define required evidence for anomaly confirmation, rejection, and escalation
+- [x] Create offline-first field inspection playbooks for low-connectivity areas
+- [x] Measure field turnaround time from request to verified result
+- [x] Track sync delays, offline conflicts, and evidence completeness from field teams
+- [x] Establish supervisor review rules for field-submitted findings
+
+#### Reporting and executive operations
+
+- [x] Define the official executive KPI pack for weekly and monthly governance reviews
+- [x] Create a standard provincial geospatial briefing template
+- [x] Create a standard municipal operations briefing template
+- [x] Track report open rates, download rates, delivery failures, and follow-up actions
+- [x] Link interventions and executive decisions back to originating anomalies and reports
+- [x] Measure briefing usefulness through stakeholder feedback and action follow-through
+
+### Stage 3 — program governance, continuous improvement, and impact measurement
+
+#### Model governance
+
+- [x] Establish champion-vs-challenger evaluation for anomaly and forecast models
+- [x] Define model promotion criteria with rollback-safe release procedures
+- [x] Track drift in input distributions, output scores, and human override behavior
+- [x] Measure model performance by source, region, season, and crop stage
+- [x] Maintain threshold tuning history with outcome-based evaluation
+- [x] Run scheduled regression checks after model, threshold, or source changes
+- [x] Define formal approval workflow for model and threshold promotions
+
+#### Program impact measurement
+
+- [x] Measure response-time improvement from anomaly detection to intervention
+- [x] Measure reduction in false alarms and unresolved cases over time
+- [x] Estimate intervention ROI using stock, price, import, and field outcome signals
+- [x] Track adoption coverage by municipality, agency, and operator group
+- [x] Track geospatial insight contribution to reports, alerts, and operational decisions
+- [x] Build a province-to-province readiness and performance scorecard
+- [x] Publish a quarterly program health review for stakeholders
+
+#### Geographic and organizational expansion
+
+- [x] Create a reusable onboarding package for new provinces and partner agencies
+- [x] Parameterize crop calendars, terminology, and risk assumptions by region
+- [x] Add localization and translation review for multilingual operational surfaces
+- [x] Define minimum data prerequisites before enabling a new region
+- [x] Create an agency integration certification checklist for external partners
+- [x] Track expansion readiness against staffing, data quality, and infrastructure capacity
+
+#### Continuous improvement loop
+
+- [x] Schedule regular backlog reviews based on production evidence instead of idea intake alone
+- [x] Review audit, observability, and usage trends monthly for hidden friction and control gaps
+- [x] Run quarterly disaster recovery and business continuity exercises
+- [x] Run quarterly security and access-review attestations
+- [x] Re-baseline KPIs after major platform, model, or workflow changes
+- [x] Archive retired workflows, reports, and configs with traceable change history
+- [x] Maintain a living risk register for operational, technical, and governance risks
+
+#### Documentation and program artifacts
+
+- [x] Maintain up-to-date architecture, data-flow, and governance documents after each major release
+- [x] Create a production operations handbook for support and response teams
+- [x] Maintain a validation methodology document for geospatial anomaly evaluation
+- [x] Maintain a report definitions catalog for every executive and operational KPI
+- [x] Maintain a connector catalog with owners, SLAs, dependencies, and failure procedures
+- [x] Maintain a data dictionary for geospatial, review, reporting, and audit entities
+
 ## Completed in this batch
 
 - [x] Playwright geospatial flow validation

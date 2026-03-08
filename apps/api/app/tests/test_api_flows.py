@@ -769,6 +769,7 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "run_decision_log" in run_ops_payload
     assert "run_scenario_replay" in run_ops_payload
     assert run_ops_payload["run_catalog_coverage"]["fully_covered"] is True
+    assert "run_a_supervised_field_pilot_with_real_operators_and_reviewers" in run_ops_payload
 
     approval_gate_status = client.get(f"/api/v1/geospatial/runs/{run_id}/operations/approval-gate", headers=auth_headers)
     assert approval_gate_status.status_code == 200
@@ -932,6 +933,11 @@ def test_geospatial_advanced_backlog_endpoints(client, auth_headers):
     assert "geospatial_notification_center" in ops_center.json()
     assert "geospatial_configuration_drift_alert" in ops_center.json()
     assert ops_center.json()["geospatial_catalog_coverage"]["fully_covered"] is True
+    assert "geospatial_case_management_for_anomaly_investigations" in ops_center.json()
+    assert "geospatial_decision_playbooks_per_anomaly_type" in ops_center.json()
+    assert "geospatial_gis_interoperability_expansion_for_geotiff_shapefile_wms_wfs_style_exchange" in ops_center.json()
+    assert "geospatial_create_a_phased_rollout_plan_by_province_municipality_and_user_cohort" in ops_center.json()
+    assert "geospatial_maintain_a_data_dictionary_for_geospatial_review_reporting_and_audit_entities" in ops_center.json()
 
     config_health = client.get("/api/v1/geospatial/dashboard/config-health", headers=auth_headers)
     assert config_health.status_code == 200
