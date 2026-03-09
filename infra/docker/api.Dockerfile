@@ -7,8 +7,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 COPY apps/api/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
+COPY infra/docker/api-entrypoint.sh /usr/local/bin/api-entrypoint.sh
+RUN chmod +x /usr/local/bin/api-entrypoint.sh
+
 COPY apps/api /workspace/apps/api
 
 EXPOSE 8000
+
+ENTRYPOINT ["/usr/local/bin/api-entrypoint.sh"]
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -31,8 +31,10 @@ services:
     container_name: phil_onion_watch_api
     env_file:
       - apps/api/.env
+    environment:
+      RUN_MIGRATIONS: "true"
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     volumes:
       - ./apps/api:/workspace/apps/api
       - ./data:/workspace/data
@@ -49,11 +51,10 @@ services:
     container_name: phil_onion_watch_web
     env_file:
       - apps/web/.env.local
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:${API_PORT:-8000}
     ports:
       - "3000:3000"
-    volumes:
-      - .:/workspace
-      - /workspace/node_modules
     depends_on:
       - api
 
@@ -64,6 +65,10 @@ services:
     container_name: phil_onion_watch_worker
     env_file:
       - apps/api/.env
+    environment:
+      RUN_MIGRATIONS: "false"
+      WAIT_FOR_JOB_RUNS_TABLE: "true"
+      JOB_RUNS_WAIT_TIMEOUT_SECONDS: "180"
     command: ["python", "-m", "app.jobs.worker"]
     volumes:
       - ./apps/api:/workspace/apps/api

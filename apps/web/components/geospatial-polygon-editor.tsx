@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-import { LonLatPoint, defaultPolygonVertices, polygonSummary, verticesToPolygonGeojson } from "../lib/geospatial";
+import type { LonLatPoint } from "../lib/geospatial";
+import { defaultPolygonVertices, polygonSummary, verticesToPolygonGeojson } from "../lib/geospatial";
 
 type Props = {
   title: string;
@@ -11,8 +12,10 @@ type Props = {
   errors: string[];
 };
 
-const GeospatialPolygonMap = dynamic(
-  () => import("./geospatial-polygon-map"),
+type PolygonMapProps = Pick<Props, "title" | "vertices" | "onChange">;
+
+const GeospatialPolygonMap = dynamic<PolygonMapProps>(
+  () => import("./geospatial-polygon-map").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => <div className="h-[320px] animate-pulse rounded-lg border border-slate-300 bg-slate-100" />,

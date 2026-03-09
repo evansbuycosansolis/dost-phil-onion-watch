@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import inspect
 
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -29,6 +30,16 @@ from app.services.report_service import generate_report
 from app.services.satellite_ingestion_service import run_ingestion
 
 logger = get_logger(__name__)
+
+
+def ensure_job_runs_table_present() -> None:
+    db = SessionLocal()
+    try:
+        table_names = set(inspect(db.get_bind()).get_table_names())
+        if "job_runs" not in table_names:
+            raise RuntimeError("Missing required table 'job_runs'. Run alembic migrations before starting worker.")
+    finally:
+        db.close()
 
 
 def _record_job_start(db, job_name: str, correlation_id: str | None = None) -> JobRun:
@@ -575,6 +586,7 @@ def create_scheduler() -> BlockingScheduler:
 
 def main() -> None:
     configure_logging()
+    ensure_job_runs_table_present()
     scheduler = create_scheduler()
     logger.info(
         "Background worker scheduler started",

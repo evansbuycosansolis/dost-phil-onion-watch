@@ -50,11 +50,11 @@ export default defineConfig({
       },
     },
     {
-      command: `pnpm exec next dev --hostname 127.0.0.1 --port ${webPort}`,
+      command: `pnpm exec next build && pnpm exec next start --hostname 127.0.0.1 --port ${webPort}`,
       cwd: __dirname,
       url: `${webBaseUrl}/login`,
       reuseExistingServer: !isCI,
-      timeout: 240_000,
+      timeout: 480_000,
       env: {
         ...process.env,
         NEXT_PUBLIC_API_BASE_URL: apiBaseUrl,

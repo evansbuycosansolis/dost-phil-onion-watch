@@ -1,3 +1,5 @@
+import pytest
+
 from app.jobs import worker
 
 
@@ -85,3 +87,25 @@ def test_scheduler_registers_geospatial_playbook_jobs():
     assert "geospatial_kpi_generation" in job_ids
     assert "geospatial_risk_review_reminder" in job_ids
     assert "geospatial_incident_slo_check" in job_ids
+
+
+def test_worker_requires_job_runs_table_before_startup(monkeypatch):
+    class DummySession:
+        def get_bind(self):
+            return object()
+
+        def close(self):
+            return None
+
+    class DummyInspector:
+        def __init__(self, table_names):
+            self._table_names = table_names
+
+        def get_table_names(self):
+            return self._table_names
+
+    monkeypatch.setattr(worker, "SessionLocal", lambda: DummySession())
+    monkeypatch.setattr(worker, "inspect", lambda _bind: DummyInspector(["users", "alerts"]))
+
+    with pytest.raises(RuntimeError, match="job_runs"):
+        worker.ensure_job_runs_table_present()

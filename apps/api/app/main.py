@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from datetime import date
+from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.api.v1 import (
     admin,
@@ -95,6 +96,50 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.add_middleware(CorrelationIdMiddleware)
+
+
+@app.get("/healthz")
+def healthz() -> dict:
+    return {"status": "ok", "service": settings.app_name}
+
+
+@app.get("/readyz")
+def readyz() -> dict:
+    issues: list[str] = []
+
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        issues.append(f"database: {exc}")
+    finally:
+        db.close()
+
+    try:
+        reports_dir = Path(settings.reports_path)
+        reports_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        issues.append(f"reports_path: {exc}")
+
+    try:
+        faiss_meta_path = Path(settings.faiss_metadata_path)
+        faiss_meta_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        issues.append(f"faiss_metadata_path: {exc}")
+
+    try:
+        faiss_index_path = Path(settings.faiss_index_path)
+        faiss_index_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception as exc:
+        issues.append(f"faiss_index_path: {exc}")
+
+    if issues:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"status": "not_ready", "issues": issues},
+        )
+
+    return {"status": "ready", "service": settings.app_name}
 
 
 @app.get("/health")

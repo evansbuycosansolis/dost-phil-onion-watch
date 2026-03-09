@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "e2e:webserver": "next build && next start",
     "test:e2e": "playwright test",
     "test": "echo test-skip-web",
     "format": "echo format-skip-web"

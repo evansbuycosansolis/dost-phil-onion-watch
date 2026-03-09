@@ -68,9 +68,10 @@ kubectl -n phil-onion-watch logs deploy/worker --tail=100
 Run these after the rollout is healthy:
 
 ```bash
-# API health + metrics
+# API health + readiness + metrics
 kubectl -n phil-onion-watch port-forward deploy/api 8000:8000
-curl -fsS http://127.0.0.1:8000/health
+curl -fsS http://127.0.0.1:8000/healthz
+curl -fsS http://127.0.0.1:8000/readyz
 curl -fsS http://127.0.0.1:8000/metrics | head
 
 # Web login

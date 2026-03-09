@@ -92,6 +92,9 @@ jobs:
       - name: Install Playwright browser
         run: pnpm --filter @phil-onion-watch/web exec playwright install --with-deps chromium
 
+      - name: Clean Next.js build artifacts
+        run: rm -rf apps/web/.next
+
       - name: Run web E2E release confidence checks
         env:
           SECRET_KEY: ci-secret

@@ -50,6 +50,25 @@ docker compose up --build
 - API: `http://localhost:8000`
 - API docs: `http://localhost:8000/docs`
 
+4. Run runtime smoke checks:
+
+```bash
+pnpm smoke:compose
+```
+
+If host port `8000` is already in use, override the API host port:
+
+```bash
+API_PORT=8001 docker compose up --build
+```
+
+PowerShell:
+
+```powershell
+$env:API_PORT="8001"
+docker compose up --build
+```
+
 ## Quickstart (local process)
 
 ```bash
@@ -247,3 +266,26 @@ pnpm --filter @phil-onion-watch/web test:e2e
 - Operational truth remains in relational tables (Postgres).
 - Vector index is limited to unstructured document retrieval.
 - RBAC is fail-closed and mutations emit audit events.
+
+## Troubleshooting
+
+### Port 8000 in use (Manager.exe)
+
+On Windows, a system service such as `Manager.exe` may already listen on `0.0.0.0:8000`, which prevents API binding.
+
+1. Check listener:
+
+```powershell
+netstat -ano | findstr :8000
+```
+
+2. Start compose with a different API port:
+
+```powershell
+$env:API_PORT="8001"
+docker compose up -d --build
+```
+
+3. Use the mapped API URL:
+- API: `http://localhost:8001`
+- API docs: `http://localhost:8001/docs`
