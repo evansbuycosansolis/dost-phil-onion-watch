@@ -13,5 +13,5 @@ testpaths = ["app/tests"]
 pythonpath = ["."]
 filterwarnings = [
   "ignore:Too few observations to estimate starting parameters for seasonal ARMA.*:UserWarning",
-  "ignore:urllib3 .* doesn't match a supported version!:requests.exceptions.RequestsDependencyWarning",
+  "ignore:urllib3 .* doesn't match a supported version!:Warning",
 ]
